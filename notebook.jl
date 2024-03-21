@@ -4,14 +4,26 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+end
+
 # ╔═╡ 5459dc82-e589-464b-ad13-f01b84a7d888
 # all imports here...
 begin
-	import NeumannKelvin as nk
+	using NeumannKelvin
+	using NeumannKelvin: quadξ, kelvin, source
 	using Plots
 	using StaticArrays
 	using TypedTables
 	using ForwardDiff: derivative 
+	using PlutoUI
 end
 
 # ╔═╡ eb38f380-e2b2-11ee-373f-c9d7d40ee588
@@ -74,7 +86,7 @@ begin
 		d_zeta = 1/round(D/hz)
 		zeta = -0.5*d_zeta : -d_zeta: -1
 
-		nk.param_props.(hull, xi, zeta', d_xi, d_zeta) |> Table
+		param_props.(hull, xi, zeta', d_xi, d_zeta) |> Table
 	end
 
 	md"""
@@ -99,17 +111,17 @@ iswaterline(p) = p.x[3] + p.T₁[3] + p.T₂[3] > 0
 # ╔═╡ 694120b8-b600-4c9d-b6e0-3625b96bdbea
 # copied over the functions from wigely.jl
 begin
-	function phi(x,p;add_waterline=false, kwargs...)
-		area = nk.ϕ(x,p;kwargs...) #potentially the wrong phi?? I hate this utf-8 encoding
-		contour = add_waterline ? phi_chi(x,p;kwargs...) : 0.
+	function ϕ(x,p;add_waterline=false, kwargs...)
+		area = NeumannKelvin.ϕ(x,p;kwargs...)
+		contour = add_waterline ? ϕᵪ(x,p;kwargs...) : 0.
 		area+contour
 	end
 	
-	∂ₙϕ(pᵢ,pⱼ;kwargs...) = derivative(t->phi(pᵢ.x+t*pᵢ.n,pⱼ;kwargs...),0.)
-	φ(x,q,panels;kwargs...) = sum(qᵢ*nk.ϕ(x,pᵢ;kwargs...) for (qᵢ,pᵢ) in zip(q,panels))
+	∂ₙϕ(pᵢ,pⱼ;kwargs...) = derivative(t->ϕ(pᵢ.x+t*pᵢ.n,pⱼ;kwargs...),0.)
+	φ(x,q,panels;kwargs...) = sum(qᵢ*ϕ(x,pᵢ;kwargs...) for (qᵢ,pᵢ) in zip(q,panels))
 	∇φ(x,q,panels;kwargs...) = gradient(x->φ(x,q,panels;kwargs...),x)
 	
-	function phi_chi(x,p;G=kelvin,Fn,kwargs...)
+	function ϕᵪ(x,p;G=kelvin,Fn,kwargs...)
 		!iswaterline(p) && return 0.
 
 		chi = SA[p.x[1],p.x[2],-eps()]
@@ -118,7 +130,7 @@ begin
 
 		sum(abs2, x-chi)>9*p.dA && return G(x, chi;Fn, kwargs...)*beta
 
-		nk.quadξ(t->G(x,chi+t*p.T₁;Fn,kwargs...))
+		quadξ(t->G(x,chi+t*p.T₁;Fn,kwargs...)*beta)
 	end
 end
 
@@ -128,23 +140,30 @@ function plot_waterline(q, panels; kwargs...)
 	waterline_x = first(centers(waterline_panels)) # x coordinates of waterline
 	waterline_height = map(waterline_panels.x) do cen
 		x, y, z = cen
-		zeta(x,y,z) = 2* derivative(x->phi(SA[x,y,z],q,panels;kwargs...),x)
+		zeta(x,y,z) = 2* derivative(x->φ(SA[x,y,z],q,panels;kwargs...),x)
 		zeta(x,y,z) - z*derivative(z->zeta(x,y,z),z)
 	end
 	plot(waterline_x, waterline_height,c=:black,label=nothing)
+	scatter!(waterline_x, waterline_height, c=:black,label=nothing)
+end
+
+# ╔═╡ 9ab4f963-dc40-433a-9dfe-a7b56a1116ff
+begin
+	check = @bind wl_check CheckBox()
+	md"add_waterline $check"
 end
 
 # ╔═╡ cfa862f8-c845-4c30-90c0-0e1a50afdbd7
 begin
 	Fn = 0.316
 	U = SA[-1,0,0]
-	b = -nk.Uₙ.(panels;U)
-	A_chi = ∂ₙϕ.(panels,panels';G=nk.kelvin,Fn,add_waterline=true)
-	q_chi = A_chi \ b; @assert A_chi * q_chi ≈ b
+	b = -Uₙ.(panels;U)
+	A = ∂ₙϕ.(panels,panels';G=kelvin,Fn,add_waterline=wl_check)
+	q = A \ b; @assert A * q ≈ b
 end
 
 # ╔═╡ 42f045da-48f2-47ce-8b99-1c7dd3ed83c3
-plot_waterline(q_chi,panels;G=nk.kelvin,Fn,add_waterline=true)
+plot_waterline(q,panels;G=kelvin,Fn,add_waterline=wl_check)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -152,6 +171,7 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 NeumannKelvin = "7f078b06-e5c4-4cf8-bb56-b92882a0ad03"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 TypedTables = "9d95f2ec-7b3d-5a63-8d20-e2491e220bb9"
 
@@ -159,6 +179,7 @@ TypedTables = "9d95f2ec-7b3d-5a63-8d20-e2491e220bb9"
 ForwardDiff = "~0.10.36"
 NeumannKelvin = "~0.1.4"
 Plots = "~1.40.1"
+PlutoUI = "~0.7.58"
 StaticArrays = "~1.9.3"
 TypedTables = "~1.4.6"
 """
@@ -169,7 +190,13 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.2"
 manifest_format = "2.0"
-project_hash = "927acdb07885c2d01f9b8cb7bb97d18365470711"
+project_hash = "3ed42454ac420cbb0820bd35d56a6b46a6ef5c13"
+
+[[deps.AbstractPlutoDingetjes]]
+deps = ["Pkg"]
+git-tree-sha1 = "0f748c81756f2e5e6854298f11ad8b2dfae6911a"
+uuid = "6e696c72-6542-2067-7265-42206c756150"
+version = "1.3.0"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra", "Requires"]
@@ -460,6 +487,24 @@ git-tree-sha1 = "129acf094d168394e80ee1dc4bc06ec835e510a3"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
 version = "2.8.1+1"
 
+[[deps.Hyperscript]]
+deps = ["Test"]
+git-tree-sha1 = "179267cfa5e712760cd43dcae385d7ea90cc25a4"
+uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
+version = "0.0.5"
+
+[[deps.HypertextLiteral]]
+deps = ["Tricks"]
+git-tree-sha1 = "7134810b1afce04bbc1045ca1985fbe81ce17653"
+uuid = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
+version = "0.9.5"
+
+[[deps.IOCapture]]
+deps = ["Logging", "Random"]
+git-tree-sha1 = "8b72179abc660bfab5e28472e019392b97d0985c"
+uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
+version = "0.2.4"
+
 [[deps.Indexing]]
 git-tree-sha1 = "ce1566720fd6b19ff3411404d4b977acd4814f9f"
 uuid = "313cdc1a-70c2-5d6a-ae34-0150d3930a38"
@@ -650,6 +695,11 @@ git-tree-sha1 = "c1dd6d7978c12545b4179fb6153b9250c96b0075"
 uuid = "e6f89c97-d47a-5376-807f-9c37f3926c36"
 version = "1.0.3"
 
+[[deps.MIMEs]]
+git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
+uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
+version = "0.1.4"
+
 [[deps.MacroTools]]
 deps = ["Markdown", "Random"]
 git-tree-sha1 = "2fa9ee3e63fd3a4f7a9a4f4744a52f4856de82df"
@@ -808,6 +858,12 @@ version = "1.40.1"
     IJulia = "7073ff75-c697-5162-941a-fcdaad2a7d2a"
     ImageInTerminal = "d8c32880-2388-543b-8c61-d9f865259254"
     Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
+
+[[deps.PlutoUI]]
+deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
+git-tree-sha1 = "71a22244e352aa8c5f0f2adde4150f62368a3f2e"
+uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+version = "0.7.58"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
@@ -1011,6 +1067,11 @@ weakdeps = ["Random", "Test"]
 
     [deps.TranscodingStreams.extensions]
     TestExt = ["Test", "Random"]
+
+[[deps.Tricks]]
+git-tree-sha1 = "eae1bb484cd63b36999ee58be2de6c178105112f"
+uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
+version = "0.1.8"
 
 [[deps.TypedTables]]
 deps = ["Adapt", "Dictionaries", "Indexing", "SplitApplyCombine", "Tables", "Unicode"]
@@ -1366,6 +1427,7 @@ version = "1.4.1+1"
 # ╠═1ab68e52-13ea-4a93-9136-d6e83d3c24c1
 # ╠═4db0b387-cb18-4d3b-b111-23342e831156
 # ╠═694120b8-b600-4c9d-b6e0-3625b96bdbea
+# ╠═9ab4f963-dc40-433a-9dfe-a7b56a1116ff
 # ╠═cfa862f8-c845-4c30-90c0-0e1a50afdbd7
 # ╠═42f045da-48f2-47ce-8b99-1c7dd3ed83c3
 # ╟─00000000-0000-0000-0000-000000000001
