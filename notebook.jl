@@ -98,7 +98,7 @@ end
 begin
 	B = 0.1
 	D = 0.0625
-	hx = 1/36
+	hx = 1/96
 	hz = D/5
 	h = sqrt(hx*hz)
 	panels = wigley_hull(hx,hz;B,D)
