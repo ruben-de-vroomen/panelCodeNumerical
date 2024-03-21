@@ -83,10 +83,42 @@ The hypothesis is as follows. If the sharp bow and stern of the wigley hull is r
 
 # ╔═╡ a3af56b8-e0a5-4f28-a9e6-0a2d883440f7
 md"""
-## Methodology & Code
+## Methodology 
 
-To test the hypothesis the following methodology has been applied.
-![](dia.png)
+To test the hypothesis the following methodology has been applied. The first step is to adjust the bow shape to no longer include the infinitely sharp edge. Consider the following image.
+
+![Diagram of the bow](https://github.com/ruben-de-vroomen/panelCodeNumerical/blob/litstudy/dia.png?raw=true)
+
+
+"""
+
+# ╔═╡ bd03c35d-942d-4708-b086-4cb1c45c4160
+md"""
+This image shows a slice of the wigley hull in the $xy$ plane. (i.e. camera angle in pure z topdown view). In red we have the discretized panel centers along the bow of the wigley hull. The bow will be rounded using the following method.
+
+First the first $n$ panels at the start will be disregarded. In the image this means every point lying inside the threshold distance in ignored. Next the circle with radius r must be added. 
+
+The new front most panel shares a tangent vector in the $xy$ plane with the circle we want to add. Because we already know quite a lot about this panel, its relatively easy to calculate the radius and location of the circle.
+
+The circle's centre simply lies in the crossing point of the $x$ axis, and the normal vector of this panel. (note the normal vector must be projected onto the $xy$ plane to make this work.) The radius is simply the distance from the panel center to the $x$ axis along the projected normal vector.
+
+With this information, the circle can now be discretized over the front part, labeled `S_b`. This discretization will be made very fine in order to try and capture the pressures at the bow. This process will then be repeated for every z slice of the wigley hull.
+"""
+
+# ╔═╡ 2f8a4a3b-a665-4a22-9d1e-b21ce193e6ad
+md"""
+### Next Steps
+After the bow and stern have been processed into the `Table` of panels, the radius will be varied. This is done by choosing a large number of points along the $x$ axis, and then varying the number of panels on the bow we are excluding. The less points you exclude, the sharper your simulated bow. But crucially this sharp bow is discretized into panels.
+
+The expectation is that the smaller the radius is, the better this method apporoaches the original wigley hull. This should reduce the extra modelling error introduced. The larger the bow and stern radius is, the larger this modelling error becomes (at least compared to the original wigley hull).
+
+The extra panelling at the bow and stern is expected to be better at approximating the total resistance of the wigely hull.
+"""
+
+# ╔═╡ 55548640-75a4-48b8-9e81-d887fda2fdce
+md"""
+## Code
+This next part of the notebook simply copies the original `wigley.jl` code as provided in the lectures. So nothing exciting just yet...
 """
 
 # ╔═╡ 66d2ab06-4b1a-4cf6-9500-83b8a09825fc
@@ -203,6 +235,12 @@ end
 
 # ╔═╡ 42f045da-48f2-47ce-8b99-1c7dd3ed83c3
 plot_waterline(q,panels;G=kelvin,Fn,add_waterline=wl_check)
+
+# ╔═╡ 425110f7-d7de-4555-b83b-1ecf8f30d515
+md"""
+## Adjustments
+Now for the exiting part...
+"""
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1459,7 +1497,10 @@ version = "1.4.1+1"
 # ╟─8509dff3-d008-40ce-b926-102fcc341a6a
 # ╟─abe10925-1a60-40c2-9cb9-d39c57de99f7
 # ╟─82882880-0058-4e05-af55-39810893e55a
-# ╠═a3af56b8-e0a5-4f28-a9e6-0a2d883440f7
+# ╟─a3af56b8-e0a5-4f28-a9e6-0a2d883440f7
+# ╟─bd03c35d-942d-4708-b086-4cb1c45c4160
+# ╟─2f8a4a3b-a665-4a22-9d1e-b21ce193e6ad
+# ╟─55548640-75a4-48b8-9e81-d887fda2fdce
 # ╠═5459dc82-e589-464b-ad13-f01b84a7d888
 # ╟─66d2ab06-4b1a-4cf6-9500-83b8a09825fc
 # ╠═d3042e24-2bc3-4ab7-b660-f6cff3175a93
@@ -1472,5 +1513,6 @@ version = "1.4.1+1"
 # ╠═9ab4f963-dc40-433a-9dfe-a7b56a1116ff
 # ╠═cfa862f8-c845-4c30-90c0-0e1a50afdbd7
 # ╠═42f045da-48f2-47ce-8b99-1c7dd3ed83c3
+# ╟─425110f7-d7de-4555-b83b-1ecf8f30d515
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
