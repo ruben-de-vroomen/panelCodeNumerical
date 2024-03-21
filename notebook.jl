@@ -149,7 +149,7 @@ end
 
 # ╔═╡ 9ab4f963-dc40-433a-9dfe-a7b56a1116ff
 begin
-	check = @bind wl_check CheckBox()
+	check = @bind wl_check CheckBox(default=true)
 	md"add_waterline $check"
 end
 
