@@ -84,6 +84,9 @@ The hypothesis is as follows. If the sharp bow and stern of the wigley hull is r
 # ╔═╡ a3af56b8-e0a5-4f28-a9e6-0a2d883440f7
 md"""
 ## Methodology & Code
+
+To test the hypothesis the following methodology has been applied.
+![](dia.png)
 """
 
 # ╔═╡ 66d2ab06-4b1a-4cf6-9500-83b8a09825fc
@@ -1456,7 +1459,7 @@ version = "1.4.1+1"
 # ╟─8509dff3-d008-40ce-b926-102fcc341a6a
 # ╟─abe10925-1a60-40c2-9cb9-d39c57de99f7
 # ╟─82882880-0058-4e05-af55-39810893e55a
-# ╟─a3af56b8-e0a5-4f28-a9e6-0a2d883440f7
+# ╠═a3af56b8-e0a5-4f28-a9e6-0a2d883440f7
 # ╠═5459dc82-e589-464b-ad13-f01b84a7d888
 # ╟─66d2ab06-4b1a-4cf6-9500-83b8a09825fc
 # ╠═d3042e24-2bc3-4ab7-b660-f6cff3175a93
