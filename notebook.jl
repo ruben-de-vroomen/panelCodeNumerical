@@ -8,9 +8,10 @@ using InteractiveUtils
 # all imports here...
 begin
 	import NeumannKelvin as nk
-	import Plots as plt
+	using Plots
 	using StaticArrays
-	# using Tables
+	using TypedTables
+	using ForwardDiff: derivative 
 end
 
 # ╔═╡ eb38f380-e2b2-11ee-373f-c9d7d40ee588
@@ -43,36 +44,37 @@ We want something to compare our testing methods to, so we will generate a gener
 """
 
 # ╔═╡ d3042e24-2bc3-4ab7-b660-f6cff3175a93
-function wigley(eps, zeta; c1=0, c2=0, c3=0)
-	(1-zeta^2)*(1-eps^2) * (1+c1*eps^2+c2*eps^4) + c3*(zeta^2)*(1-zeta^8)*(1-eps^2)^4
+function wigley(xi, zeta; c1=0, c2=0, c3=0)
+	(1-zeta^2)*(1-xi^2) * (1+c1*xi^2+c2*xi^4) + c3*(zeta^2)*(1-zeta^8)*(1-xi^2)^4
 end
 
 # ╔═╡ b7fa72fd-49c2-40f5-a34f-5543928fbd48
 function section_lines(; kwargs...)
 	zeta = -1:0.01:0
-	eps = -1:0.05:0
+	xi = -1:0.05:0
 
-	eta = wigley.(eps', zeta; kwargs...)
-	plt.plot(eta, zeta, eps, legend=false, color=:black, aspect_ratio=:equal)
+	eta = wigley.(xi', zeta; kwargs...)
+	plot(eta, zeta, xi, legend=false, color=:black, aspect_ratio=:equal)
 end; section_lines(;c1=0,c2=0,c3=0)
 
 # ╔═╡ a41ed416-919f-45b1-a65f-c87c7d43d0db
 begin
+	centers(panels) = eachrow(stack(panels.x))
 	function wigley_hull(hx, hz; L=1, B=1,D=1,kwargs...)
-		oneside(eps,zeta;s=1) = SA[0.5*L*eps, -s*0.5*B*wigley(eps,zeta;kwargs...),D*zeta]
+		oneside(xi,zeta;s=1) = SA[0.5*L*xi, -s*0.5*B*wigley(xi,zeta;kwargs...),D*zeta]
 
 		# if statement - i think this does an if check for port and starboard
-		hull(eps, zeta) = eps < 1 ? oneside(eps, zeta) : oneside(2-eps,zeta,s=-1)
+		hull(xi, zeta) = xi < 1 ? oneside(xi, zeta) : oneside(2-xi,zeta,s=-1)
 
 		# epsilon stuff - ends with range
-		d_eps  = 2/round(L/hx)
-		eps = 0.5*d_eps-1 : d_eps : 3
+		d_xi  = 2/round(L/hx)
+		xi = 0.5*d_xi-1 : d_xi : 3
 
 		# zeta stuff - ends with range
 		d_zeta = 1/round(D/hz)
 		zeta = -0.5*d_zeta : -d_zeta: -1
 
-		nk.param_props.(hull, eps, zeta', d_eps, d_zeta) |> Table
+		nk.param_props.(hull, xi, zeta', d_xi, d_zeta) |> Table
 	end
 
 	md"""
@@ -87,20 +89,78 @@ begin
 	hx = 1/36
 	hz = D/5
 	h = sqrt(hx*hz)
-	panels = wigley_hull(hx, hz;B,D)
+	panels = wigley_hull(hx,hz;B,D)
+end; display(panels)
+
+# ╔═╡ 1ab68e52-13ea-4a93-9136-d6e83d3c24c1
+# returns bool if the corner of the panel sits above the z axis (aka the panels on the waterline)
+iswaterline(p) = p.x[3] + p.T₁[3] + p.T₂[3] > 0
+
+# ╔═╡ 694120b8-b600-4c9d-b6e0-3625b96bdbea
+# copied over the functions from wigely.jl
+begin
+	function phi(x,p;add_waterline=false, kwargs...)
+		area = nk.ϕ(x,p;kwargs...) #potentially the wrong phi?? I hate this utf-8 encoding
+		contour = add_waterline ? phi_chi(x,p;kwargs...) : 0.
+		area+contour
+	end
+	
+	∂ₙϕ(pᵢ,pⱼ;kwargs...) = derivative(t->phi(pᵢ.x+t*pᵢ.n,pⱼ;kwargs...),0.)
+	φ(x,q,panels;kwargs...) = sum(qᵢ*nk.ϕ(x,pᵢ;kwargs...) for (qᵢ,pᵢ) in zip(q,panels))
+	∇φ(x,q,panels;kwargs...) = gradient(x->φ(x,q,panels;kwargs...),x)
+	
+	function phi_chi(x,p;G=kelvin,Fn,kwargs...)
+		!iswaterline(p) && return 0.
+
+		chi = SA[p.x[1],p.x[2],-eps()]
+
+		beta = -Fn^2 * p.n[1]*p.T₁[2]
+
+		sum(abs2, x-chi)>9*p.dA && return G(x, chi;Fn, kwargs...)*beta
+
+		nk.quadξ(t->G(x,chi+t*p.T₁;Fn,kwargs...))
+	end
 end
+
+# ╔═╡ 4db0b387-cb18-4d3b-b111-23342e831156
+function plot_waterline(q, panels; kwargs...)
+	waterline_panels = filter(iswaterline,panels)
+	waterline_x = first(centers(waterline_panels)) # x coordinates of waterline
+	waterline_height = map(waterline_panels.x) do cen
+		x, y, z = cen
+		zeta(x,y,z) = 2* derivative(x->phi(SA[x,y,z],q,panels;kwargs...),x)
+		zeta(x,y,z) - z*derivative(z->zeta(x,y,z),z)
+	end
+	plot(waterline_x, waterline_height,c=:black,label=nothing)
+end
+
+# ╔═╡ cfa862f8-c845-4c30-90c0-0e1a50afdbd7
+begin
+	Fn = 0.316
+	U = SA[-1,0,0]
+	b = -nk.Uₙ.(panels;U)
+	A_chi = ∂ₙϕ.(panels,panels';G=nk.kelvin,Fn,add_waterline=true)
+	q_chi = A_chi \ b; @assert A_chi * q_chi ≈ b
+end
+
+# ╔═╡ 42f045da-48f2-47ce-8b99-1c7dd3ed83c3
+plot_waterline(q_chi,panels;G=nk.kelvin,Fn,add_waterline=true)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 NeumannKelvin = "7f078b06-e5c4-4cf8-bb56-b92882a0ad03"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+TypedTables = "9d95f2ec-7b3d-5a63-8d20-e2491e220bb9"
 
 [compat]
+ForwardDiff = "~0.10.36"
 NeumannKelvin = "~0.1.4"
 Plots = "~1.40.1"
 StaticArrays = "~1.9.3"
+TypedTables = "~1.4.6"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -109,7 +169,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.2"
 manifest_format = "2.0"
-project_hash = "f31c450da0ab678c3c87be6cf0c46c8b82ddf0b0"
+project_hash = "927acdb07885c2d01f9b8cb7bb97d18365470711"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra", "Requires"]
@@ -1303,5 +1363,10 @@ version = "1.4.1+1"
 # ╠═b7fa72fd-49c2-40f5-a34f-5543928fbd48
 # ╠═a41ed416-919f-45b1-a65f-c87c7d43d0db
 # ╠═4bd72841-196a-4653-8b8e-d5b474c3f3e5
+# ╠═1ab68e52-13ea-4a93-9136-d6e83d3c24c1
+# ╠═4db0b387-cb18-4d3b-b111-23342e831156
+# ╠═694120b8-b600-4c9d-b6e0-3625b96bdbea
+# ╠═cfa862f8-c845-4c30-90c0-0e1a50afdbd7
+# ╠═42f045da-48f2-47ce-8b99-1c7dd3ed83c3
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
