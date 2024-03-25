@@ -29,7 +29,7 @@ end
 # ╔═╡ eb38f380-e2b2-11ee-373f-c9d7d40ee588
 md"""
 # Panel Method Improvements
-- Anna de Bever - 
+- Anna de Bever - 5144674
 - Ruben de Vroomen - 5140617
 """
 
@@ -239,8 +239,23 @@ plot_waterline(q,panels;G=kelvin,Fn,add_waterline=wl_check)
 # ╔═╡ 425110f7-d7de-4555-b83b-1ecf8f30d515
 md"""
 ## Adjustments
-Now for the exiting part...
+Now that the baseline case from the lectures is working, the trial to improve the methods can begin. For this to work, the `Table` called `panels` will be postprocessed using the method described above, where the ends of the hull are chopped off and replaced with a cylindrical bow.
 """
+
+# ╔═╡ 6f5e86ea-1164-469b-a6fc-99279044b2c1
+
+
+# ╔═╡ 67717f88-12e3-472d-97ca-9483fae30a04
+begin
+	panels_adapted = panels
+	panel_filter = filter(row -> (abs(row.x[1]) < 0.45), panels_adapted)
+	
+	Plots.scatter(centers(panel_filter)[1], centers(panel_filter)[2],aspect_ratio=:equal)
+	# Plots.scatter!(x₁, y₁, aspect_ratio=:equal)
+end
+
+# ╔═╡ eb79419e-df92-4bd3-98e1-5e57bb7b45c5
+plotly()
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1513,6 +1528,9 @@ version = "1.4.1+1"
 # ╠═9ab4f963-dc40-433a-9dfe-a7b56a1116ff
 # ╠═cfa862f8-c845-4c30-90c0-0e1a50afdbd7
 # ╠═42f045da-48f2-47ce-8b99-1c7dd3ed83c3
-# ╟─425110f7-d7de-4555-b83b-1ecf8f30d515
+# ╠═425110f7-d7de-4555-b83b-1ecf8f30d515
+# ╠═6f5e86ea-1164-469b-a6fc-99279044b2c1
+# ╠═67717f88-12e3-472d-97ca-9483fae30a04
+# ╟─eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
