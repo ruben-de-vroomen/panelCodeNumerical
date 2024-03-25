@@ -242,16 +242,53 @@ md"""
 Now that the baseline case from the lectures is working, the trial to improve the methods can begin. For this to work, the `Table` called `panels` will be postprocessed using the method described above, where the ends of the hull are chopped off and replaced with a cylindrical bow.
 """
 
-# ╔═╡ 6f5e86ea-1164-469b-a6fc-99279044b2c1
-
-
 # ╔═╡ 67717f88-12e3-472d-97ca-9483fae30a04
 begin
-	panels_adapted = panels
-	panel_filter = filter(row -> (abs(row.x[1]) < 0.45), panels_adapted)
+	panels_adapted = panels # copy over the panels
+	x_target = 0.45 # this defines the cut-off point!
 	
-	Plots.scatter(centers(panel_filter)[1], centers(panel_filter)[2],aspect_ratio=:equal)
-	# Plots.scatter!(x₁, y₁, aspect_ratio=:equal)
+	# filter out only the desired panels based on x coordinates
+	panel_filter = filter(row -> (abs(row.x[1]) <= x_target), panels_adapted)
+	front_face = findall(row -> row.x[1] == max(row.x[1]), panel_filter)
+	
+	# Plots.scatter(centers(front_face)[1], centers(front_face)[2])
+	Plots.scatter!(centers(panel_filter)[1], centers(panel_filter)[2],aspect_ratio=:equal)
+
+	
+end
+
+# ╔═╡ adc2fe7d-896c-470f-b512-bb8c9fc92088
+begin
+function Radius_Location(x_target)
+	#looks for first panel after submitted x value
+	for i in range(1,stop = size(panels_adapted)[1])
+		panel_x[i] = panels_adapted[i][1][1]
+	end
+	x₀ = findfirst(>=(x_target), panel_x)
+	normal_in = -panels_adapted[x₀][2][1:2] #normal (not normalized!!) in xy plane, pointing inward
+	x = panels_adapted[x₀][1][1:2] #x-y location of a point
+	mult_fac = x[2]/normal_in[2] #multiplication factor
+	radius = sqrt((mult_fac*normal_in[1])^2 + (mult_fac*normal_in[2])^2)
+	centre_circle = SA[x[1]+mult_fac*normal_in[1] , 0]
+	return radius, centre_circle
+end
+	
+panel_x = zeros(size(panels_adapted)[1])
+panel_y = zeros(size(panels_adapted)[1])
+for i in range(1,stop = size(panels_adapted)[1])
+	panel_x[i] = panels_adapted[i][1][1]
+	panel_y[i] = panels_adapted[i][1][2]
+end
+		
+
+radius, loc = Radius_Location(0.4)
+t = range(0,stop=2*π,step=0.1)
+x₁ = loc[1] .+ radius * cos.(t)
+y₁ = loc[2] .+ radius * sin.(t)
+
+Plots.scatter(panel_x, panel_y,aspect_ratio=:equal)
+Plots.scatter!(x₁, y₁, aspect_ratio=:equal)
+
 end
 
 # ╔═╡ eb79419e-df92-4bd3-98e1-5e57bb7b45c5
@@ -1529,8 +1566,8 @@ version = "1.4.1+1"
 # ╠═cfa862f8-c845-4c30-90c0-0e1a50afdbd7
 # ╠═42f045da-48f2-47ce-8b99-1c7dd3ed83c3
 # ╠═425110f7-d7de-4555-b83b-1ecf8f30d515
-# ╠═6f5e86ea-1164-469b-a6fc-99279044b2c1
 # ╠═67717f88-12e3-472d-97ca-9483fae30a04
+# ╠═adc2fe7d-896c-470f-b512-bb8c9fc92088
 # ╟─eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
