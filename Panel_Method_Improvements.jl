@@ -99,7 +99,8 @@ begin
 	B = 0.1
 	D = 0.0625
 	hx = 1/36
-	hz = D
+	dz = 4 # amount of slices the hull will be divided into
+	hz = D/dz
 	h = sqrt(hx*hz)
 	panels = wigley_hull(hx,hz;B,D)
 end; display(panels)
@@ -187,14 +188,35 @@ end; display(test), display(array), display(array[4])
 Plots.scatter(centers(panels_adapted)...,marker_z=panels.dA/h^2,label=nothing)
 
 # ╔═╡ e45d6a72-71c7-47c5-b39d-7f146024247e
-cos(1)
+testA = panels_adapted[1][1][1:3]
+
+# ╔═╡ 729f1223-f4c1-4566-b023-50b71c4d965b
+begin
+tekst = 0
+controle= [-0.486111, 3]
+for i in range(1,size(testA)[1])
+	if testA[i] == any(controle)
+		tekst = 118
+	else 
+		tekst = 24
+	end
+end
+end; display(tekst)
 
 # ╔═╡ dbd3a2cb-e1ce-495d-a752-d8a35be5ba2b
 begin
-function Radius_Location(x_target)
+dz_slices = fill(NaN, dz)
+function Radius_Location(x_target,z_loc)
 	#looks for first panel after submitted x value
-	for i in range(1,stop = size(panels_adapted)[1])
-		panel_x[i] = panels_adapted[i][1][1]
+	k=0
+	# dit werkt nog niet ben het nog aan het uitpuzzelen
+	for j in range(1, stop = dz)
+		k = k+1
+		if panel_z[j] != dz_slices
+		if panel_z[j] == dz_slices[k]
+			panel_z[j] = panels_adapted[i][1][3]
+				for i in range(1,stop = size(panels_adapted)[1])
+					panel_x[i] = panels_adapted[i][1][1]
 	end
 	x₀ = findfirst(>=(x_target), panel_x)
 	normal_in = -panels_adapted[x₀][2][1:2] #normal (not normalized!!) in xy plane, pointing inward
@@ -205,6 +227,7 @@ function Radius_Location(x_target)
 	return radius, centre_circle
 end
 	
+#plotting excisting wigely hull 
 panel_x = zeros(size(panels_adapted)[1])
 panel_y = zeros(size(panels_adapted)[1])
 for i in range(1,stop = size(panels_adapted)[1])
@@ -214,12 +237,30 @@ end
 		
 scatter(panel_x, panel_y)
 
+#checking & plotting designed circle
 radius, loc = Radius_Location(0.4)
 t = range(0,stop=2*π,step=0.1)
 x₁ = loc[1] .+ radius * cos.(t)
 y₁ = loc[2] .+ radius * sin.(t)
 
 scatter!(x₁, y₁)
+
+
+#aim: panel first part of the circle and splice with wigley hull
+
+for i in range(1,stop = size(panels_adapted)[1])
+	panel_x[i] = panels_adapted[i][1][1]
+	panel_z[i] = panels_adapted[i][1][3]
+end
+	
+function Panelling_cylinder(dθ, z, x)
+#dθ is the angle on the circle each panel must cover
+#z is the height that is being looked at
+#x is the cutof location
+
+
+	
+end
 
 
 end
@@ -1495,6 +1536,7 @@ version = "1.4.1+1"
 # ╠═546b1e13-03aa-483d-b7c2-64799b8cd965
 # ╠═ad55f3c9-3d72-49ce-ad86-527ea023d1f5
 # ╠═e45d6a72-71c7-47c5-b39d-7f146024247e
+# ╠═729f1223-f4c1-4566-b023-50b71c4d965b
 # ╠═dbd3a2cb-e1ce-495d-a752-d8a35be5ba2b
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
