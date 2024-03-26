@@ -288,7 +288,8 @@ for i in range(1,stop = size(panels_adapted)[1])
 end
 		
 
-radius, loc = Radius_Location(0.4)
+radius, loc = Radius_Location(0.45)
+display(radius)
 t = range(0,stop=2*π,step=0.1)
 x₁ = loc[1] .+ radius * cos.(t)
 y₁ = loc[2] .+ radius * sin.(t)
@@ -300,7 +301,13 @@ end
 
 # ╔═╡ 5509c0e7-aac3-48b7-8dac-951e163215eb
 function radiusLocation(point)
+	normal_in_xy = -point.n[1:2] #ditch the z component for now
+	mult_fac = point.x[2] / normal_in_xy[2]
+	
+	radius = sqrt((mult_fac*normal_in_xy[1])^2 + (mult_fac*normal_in_xy[2])^2)
+	centre_location = SA[point.x[1]+mult_fac*normal_in_xy[1],0]
 
+	return radius, centre_location
 end
 
 # ╔═╡ fcef2341-6658-43e4-b5f3-fd602938f021
@@ -313,7 +320,8 @@ begin
 			points = filter(row -> row.x[3] ≈ z_levels[i],face)
 			@assert size(points)[1] == 2
 
-			display(points)
+			rad, loc = radiusLocation(points[2])
+			display(rad)
 		end
 
 		
