@@ -188,9 +188,20 @@ end; display(test), display(array), display(array[4])
 Plots.scatter(centers(panels_adapted)...,marker_z=panels.dA/h^2,label=nothing)
 
 # ╔═╡ e45d6a72-71c7-47c5-b39d-7f146024247e
-testA = panels_adapted[1][1][1:3]
+# ╠═╡ disabled = true
+#=╠═╡
+testA = panels_adapted[1][1][:3]
+  ╠═╡ =#
+
+# ╔═╡ 2e4cb3f3-f88a-4c2a-ac43-4ce017a72bf9
+# ╠═╡ disabled = true
+#=╠═╡
+centers(panels)
+  ╠═╡ =#
 
 # ╔═╡ 729f1223-f4c1-4566-b023-50b71c4d965b
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 tekst = 0
 controle= [-0.486111, 3]
@@ -202,68 +213,100 @@ for i in range(1,size(testA)[1])
 	end
 end
 end; display(tekst)
+  ╠═╡ =#
 
 # ╔═╡ dbd3a2cb-e1ce-495d-a752-d8a35be5ba2b
 begin
-dz_slices = fill(NaN, dz)
-function Radius_Location(x_target,z_loc)
-	#looks for first panel after submitted x value
-	k=0
-	# dit werkt nog niet ben het nog aan het uitpuzzelen
-	for j in range(1, stop = dz)
-		k = k+1
-		if panel_z[j] != dz_slices
-		if panel_z[j] == dz_slices[k]
-			panel_z[j] = panels_adapted[i][1][3]
-				for i in range(1,stop = size(panels_adapted)[1])
-					panel_x[i] = panels_adapted[i][1][1]
+dz_slices = fill(NaN, dz+1)
+radius = fill(NaN, dz+1)
+centre_circle = fill([NaN, NaN], dz+1)
+panel_x = zeros(size(panels_adapted)[1])
+panel_y = zeros(size(panels_adapted)[1])
+panel_z = zeros(size(panels_adapted)[1])
+
+#looks for first panel after submitted x value
+k=1
+# dit werkt nog niet ben het nog aan het uitpuzzelen
+for j in range(1, stop =  size(panels_adapted)[1])
+	panel_z[j] = panels_adapted[j][1][3]
+	if panel_z[j] != dz_slices[k]
+		global k = k+1
+		dz_slices[k] = panel_z[j]
 	end
-	x₀ = findfirst(>=(x_target), panel_x)
-	normal_in = -panels_adapted[x₀][2][1:2] #normal (not normalized!!) in xy plane, pointing inward
-	x = panels_adapted[x₀][1][1:2] #x-y location of a point
-	mult_fac = x[2]/normal_in[2] #multiplication factor
-	radius = sqrt((mult_fac*normal_in[1])^2 + (mult_fac*normal_in[2])^2)
-	centre_circle = SA[x[1]+mult_fac*normal_in[1] , 0]
+end			
+
+function Radius_Location(x_target)
+	for i in range(1,stop = size(panels_adapted)[1])
+		panel_x[i] = panels_adapted[i][1][1]
+	end
+	global m = 1
+	for l in range(1,stop = size(panels_adapted)[1])
+		if panel_z[l] == dz_slices[m]
+			x₀ = findfirst(>=(x_target), panel_x)
+			normal_in = -panels_adapted[x₀][2][1:2] #normal (not normalized!!) in xy plane, pointing inward
+			x = panels_adapted[x₀][1][1:2] #x-y location of a point
+			mult_fac = x[2]/normal_in[2] #multiplication factor
+			radius[m] = sqrt((mult_fac*normal_in[1])^2 + (mult_fac*normal_in[2])^2)
+			centre_circle[m] = [x[1]+mult_fac*normal_in[1] , 0]
+		elseif panel_z[l] != dz_slices[m]
+			global m = m+1
+			l = l-1
+		end
+	end
 	return radius, centre_circle
 end
 	
 #plotting excisting wigely hull 
-panel_x = zeros(size(panels_adapted)[1])
-panel_y = zeros(size(panels_adapted)[1])
 for i in range(1,stop = size(panels_adapted)[1])
 	panel_x[i] = panels_adapted[i][1][1]
 	panel_y[i] = panels_adapted[i][1][2]
 end
-		
-scatter(panel_x, panel_y)
 
 #checking & plotting designed circle
-radius, loc = Radius_Location(0.4)
-t = range(0,stop=2*π,step=0.1)
-x₁ = loc[1] .+ radius * cos.(t)
-y₁ = loc[2] .+ radius * sin.(t)
 
-scatter!(x₁, y₁)
+radius₁, loc₁ = Radius_Location(0.4)
+t₁ = range(0,stop=2*π,step=0.1)
 
+x₁ = loc₁[1][1] .+ radius₁[1] * cos.(t₁)
+y₁ = loc₁[1][2] .+ radius₁[1] * sin.(t₁)
 
-#aim: panel first part of the circle and splice with wigley hull
+x₂ = loc₁[2][1] .+ radius₁[2] * cos.(t₁)
+y₂ = loc₁[2][2] .+ radius₁[2] * sin.(t₁)
 
-for i in range(1,stop = size(panels_adapted)[1])
-	panel_x[i] = panels_adapted[i][1][1]
-	panel_z[i] = panels_adapted[i][1][3]
-end
+x3 = loc₁[2][1] .+ radius₁[2] * cos.(t₁)
+y3 = loc₁[2][2] .+ radius₁[2] * sin.(t₁)
+
+x4 = loc₁[2][1] .+ radius₁[2] * cos.(t₁)
+y4 = loc₁[2][2] .+ radius₁[2] * sin.(t₁)
+
+x5 = loc₁[2][1] .+ radius₁[2] * cos.(t₁)
+y5 = loc₁[2][2] .+ radius₁[2] * sin.(t₁)
+
 	
-function Panelling_cylinder(dθ, z, x)
+#function Panelling_cylinder(dθ, z, x)
 #dθ is the angle on the circle each panel must cover
 #z is the height that is being looked at
 #x is the cutof location
 
 
 	
+#end
+
 end
 
+# ╔═╡ 6646c668-1b4d-4f2a-822a-dbb9059213d9
+begin
+scatter(panel_x, panel_y)
+scatter!(x₁, y₁)
+scatter!(x₂, y₂)
+scatter!(x3, y3)
+scatter!(x4, y4)
+scatter!(x5, y5)
 
 end
+
+# ╔═╡ 6ad0b454-9ef8-4400-b257-f7dcd944d484
+radius₁
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1536,7 +1579,10 @@ version = "1.4.1+1"
 # ╠═546b1e13-03aa-483d-b7c2-64799b8cd965
 # ╠═ad55f3c9-3d72-49ce-ad86-527ea023d1f5
 # ╠═e45d6a72-71c7-47c5-b39d-7f146024247e
+# ╠═2e4cb3f3-f88a-4c2a-ac43-4ce017a72bf9
 # ╠═729f1223-f4c1-4566-b023-50b71c4d965b
 # ╠═dbd3a2cb-e1ce-495d-a752-d8a35be5ba2b
+# ╠═6646c668-1b4d-4f2a-822a-dbb9059213d9
+# ╠═6ad0b454-9ef8-4400-b257-f7dcd944d484
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
