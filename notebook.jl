@@ -240,6 +240,8 @@ plot_waterline(q,panels;G=kelvin,Fn,add_waterline=wl_check)
 md"""
 ## Adjustments
 Now that the baseline case from the lectures is working, the trial to improve the methods can begin. For this to work, the `Table` called `panels` will be postprocessed using the method described above, where the ends of the hull are chopped off and replaced with a cylindrical bow.
+
+The first step in doing this is to define an `x_target`, which lies between $(-0.5,0.5)$. This number will define the cut off point for the wigley hull. Next the front and rear faces of the hull can be extracted with a bit of filter magic. The figure below shows this.
 """
 
 # ╔═╡ 67717f88-12e3-472d-97ca-9483fae30a04
@@ -249,12 +251,16 @@ begin
 	
 	# filter out only the desired panels based on x coordinates
 	panel_filter = filter(row -> (abs(row.x[1]) <= x_target), panels_adapted)
-	front_face = findall(row -> row.x[1] == max(row.x[1]), panel_filter)
+	max_x = findmax(centers(panel_filter)[1])[1]
+	min_x = findmin(centers(panel_filter)[1])[1]
 	
-	# Plots.scatter(centers(front_face)[1], centers(front_face)[2])
-	Plots.scatter!(centers(panel_filter)[1], centers(panel_filter)[2],aspect_ratio=:equal)
+	for_face = filter(row -> row.x[1] ≈ max_x, panel_filter)
+	aft_face = filter(row -> row.x[1] ≈ min_x, panel_filter)
 
-	
+	# plot to double check it works as expected
+	Plots.scatter(centers(panel_filter)[1], centers(panel_filter)[2],aspect_ratio=:equal)
+	Plots.scatter!(centers(for_face)[1], centers(for_face)[2])
+	Plots.scatter!(centers(aft_face)[1], centers(aft_face)[2])
 end
 
 # ╔═╡ adc2fe7d-896c-470f-b512-bb8c9fc92088
@@ -272,6 +278,7 @@ function Radius_Location(x_target)
 	centre_circle = SA[x[1]+mult_fac*normal_in[1] , 0]
 	return radius, centre_circle
 end
+
 	
 panel_x = zeros(size(panels_adapted)[1])
 panel_y = zeros(size(panels_adapted)[1])
@@ -290,6 +297,28 @@ Plots.scatter(panel_x, panel_y,aspect_ratio=:equal)
 Plots.scatter!(x₁, y₁, aspect_ratio=:equal)
 
 end
+
+# ╔═╡ 5509c0e7-aac3-48b7-8dac-951e163215eb
+function radiusLocation(point)
+
+end
+
+# ╔═╡ fcef2341-6658-43e4-b5f3-fd602938f021
+begin 
+	function panelize_arc(face; n_paneling = 10)
+		z_levels = unique(centers(face)[3])
+		
+		for i in range(1, size(z_levels)[1])
+			# this filter finds the 2 points on this z level
+			points = filter(row -> row.x[3] ≈ z_levels[i],face)
+			@assert size(points)[1] == 2
+
+			display(points)
+		end
+
+		
+	end
+end; panelize_arc(for_face)
 
 # ╔═╡ eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 plotly()
@@ -1565,9 +1594,11 @@ version = "1.4.1+1"
 # ╠═9ab4f963-dc40-433a-9dfe-a7b56a1116ff
 # ╠═cfa862f8-c845-4c30-90c0-0e1a50afdbd7
 # ╠═42f045da-48f2-47ce-8b99-1c7dd3ed83c3
-# ╠═425110f7-d7de-4555-b83b-1ecf8f30d515
+# ╟─425110f7-d7de-4555-b83b-1ecf8f30d515
 # ╠═67717f88-12e3-472d-97ca-9483fae30a04
 # ╠═adc2fe7d-896c-470f-b512-bb8c9fc92088
+# ╠═5509c0e7-aac3-48b7-8dac-951e163215eb
+# ╠═fcef2341-6658-43e4-b5f3-fd602938f021
 # ╟─eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
