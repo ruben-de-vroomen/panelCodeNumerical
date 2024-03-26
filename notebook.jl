@@ -264,6 +264,8 @@ begin
 end
 
 # ╔═╡ adc2fe7d-896c-470f-b512-bb8c9fc92088
+# ╠═╡ disabled = true
+#=╠═╡
 begin
 function Radius_Location(x_target)
 	#looks for first panel after submitted x value
@@ -298,6 +300,7 @@ Plots.scatter(panel_x, panel_y,aspect_ratio=:equal)
 Plots.scatter!(x₁, y₁, aspect_ratio=:equal)
 
 end
+  ╠═╡ =#
 
 # ╔═╡ 5509c0e7-aac3-48b7-8dac-951e163215eb
 function radiusLocation(point)
