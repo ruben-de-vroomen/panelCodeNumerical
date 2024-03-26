@@ -247,7 +247,7 @@ The first step in doing this is to define an `x_target`, which lies between $(-0
 # ╔═╡ 67717f88-12e3-472d-97ca-9483fae30a04
 begin
 	panels_adapted = panels # copy over the panels
-	x_target = 0.45 # this defines the cut-off point!
+	x_target = 0.4 # this defines the cut-off point!
 	
 	# filter out only the desired panels based on x coordinates
 	panel_filter = filter(row -> (abs(row.x[1]) <= x_target), panels_adapted)
@@ -301,8 +301,13 @@ end
 
 # ╔═╡ 5509c0e7-aac3-48b7-8dac-951e163215eb
 function radiusLocation(point)
-	normal_in_xy = -point.n[1:2] #ditch the z component for now
+	normal_in_xy = -point.n[1:2] # ditch the z component for now
+	
+	# `mult_fac` scales the p.n to touch x axis
 	mult_fac = point.x[2] / normal_in_xy[2]
+
+	# this will make sure the vector is pointing inwards...
+	# @assert sign(normal_in_xy[1]) == sign(normal_in_xy[2])
 	
 	radius = sqrt((mult_fac*normal_in_xy[1])^2 + (mult_fac*normal_in_xy[2])^2)
 	centre_location = SA[point.x[1]+mult_fac*normal_in_xy[1],0]
@@ -312,21 +317,59 @@ end
 
 # ╔═╡ fcef2341-6658-43e4-b5f3-fd602938f021
 begin 
-	function panelize_arc(face; n_paneling = 10)
+	function panelize_arc(face; n_paneling = 11)
 		z_levels = unique(centers(face)[3])
+
+		# very specific type...
+		added_panels::Array{NamedTuple{}} = []
 		
+		# for each unique z-level we perform the loop
 		for i in range(1, size(z_levels)[1])
+			
 			# this filter finds the 2 points on this z level
 			points = filter(row -> row.x[3] ≈ z_levels[i],face)
 			@assert size(points)[1] == 2
 
+			# p_point is the positive port side point
+			if sign(points[1].x[1]) == sign(points[1].x[2])
+				p_point = points[1]
+			else
+				p_point = points[2]
+			end
+			
+			
 			rad, loc = radiusLocation(points[2])
-			display(rad)
-		end
 
-		
+			
+			angle = atan(p_point.n[2], p_point.n[1])
+			
+			# t only on new unique points...
+			if angle > 0
+				t = collect(range(-angle, angle, length=n_paneling+2))[2:n_paneling+1]
+			else
+				t = collect(range(-angle+pi, angle+pi, length=n_paneling+2))[2:n_paneling+1]
+			end
+
+			x1 = loc[1] .+ rad*cos.(t)
+			x2 = loc[2] .+ rad*sin.(t)
+
+			# this loop is going to fill the Array{NamedTuple{}} so the table can be constructed properly
+			for jdx in 1:n_paneling
+				push!(added_panels, (x=SA[x1[jdx], x2[jdx], z_levels[i]],n=[1,0,0],dA=1))
+			end
+		end
+		return added_panels |> Table
 	end
-end; panelize_arc(for_face)
+end
+
+# ╔═╡ 18778050-3488-4029-aeca-f503a3db8495
+begin
+	for_arc = panelize_arc(for_face)
+	aft_arc = panelize_arc(aft_face)
+	Plots.scatter(centers(panel_filter)[1], centers(panel_filter)[2], aspect_ratio=:equal)
+	Plots.scatter!(centers(for_arc)[1], centers(for_arc)[2])
+	Plots.scatter!(centers(aft_arc)[1], centers(aft_arc)[2])
+end
 
 # ╔═╡ eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 plotly()
@@ -1599,14 +1642,15 @@ version = "1.4.1+1"
 # ╠═1ab68e52-13ea-4a93-9136-d6e83d3c24c1
 # ╠═4db0b387-cb18-4d3b-b111-23342e831156
 # ╠═694120b8-b600-4c9d-b6e0-3625b96bdbea
-# ╠═9ab4f963-dc40-433a-9dfe-a7b56a1116ff
+# ╟─9ab4f963-dc40-433a-9dfe-a7b56a1116ff
 # ╠═cfa862f8-c845-4c30-90c0-0e1a50afdbd7
 # ╠═42f045da-48f2-47ce-8b99-1c7dd3ed83c3
 # ╟─425110f7-d7de-4555-b83b-1ecf8f30d515
 # ╠═67717f88-12e3-472d-97ca-9483fae30a04
-# ╠═adc2fe7d-896c-470f-b512-bb8c9fc92088
+# ╟─adc2fe7d-896c-470f-b512-bb8c9fc92088
 # ╠═5509c0e7-aac3-48b7-8dac-951e163215eb
 # ╠═fcef2341-6658-43e4-b5f3-fd602938f021
+# ╠═18778050-3488-4029-aeca-f503a3db8495
 # ╟─eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
