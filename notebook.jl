@@ -339,25 +339,51 @@ begin
 			else
 				p_point = points[2]
 			end
+
+
+			# debugging hell tells me this is necessary
+			if sign(p_point.x[1]) < 0
+				bow_flag = false
+			else
+				bow_flag = true
+			end
 			
 			
-			rad, loc = radiusLocation(points[2])
+			rad, loc = radiusLocation(p_point)
 
 			
-			angle = atan(p_point.n[2], p_point.n[1])
-			
-			# t only on new unique points...
+			angle = atan(p_point.n[2] / p_point.n[1])
+			# atan(y)
+			# atan2(y,x)
+
+			# defining the angle range
 			if angle > 0
-				t = collect(range(-angle, angle, length=n_paneling+2))[2:n_paneling+1]
+				double_angle = 2*angle
+			elseif angle < 0
+				double_angle = (angle+pi)*2
 			else
-				t = collect(range(-angle+pi, angle+pi, length=n_paneling+2))[2:n_paneling+1]
+				throw(DomainError(angle, "weird shit is happening to angle"))
 			end
 
+			d_angle = double_angle
+			
+			
+			# t only on new unique points...
+			if bow_flag == true
+				t = collect(range(-angle, angle, length=n_paneling))
+			else
+				t = collect(range(-angle+pi, angle+pi, length=n_paneling))
+			end
+
+			display(bow_flag)
+			display(angle)
+			display(t)
+			
 			x1 = loc[1] .+ rad*cos.(t)
 			x2 = loc[2] .+ rad*sin.(t)
 
 			# this loop is going to fill the Array{NamedTuple{}} so the table can be constructed properly
-			for jdx in 1:n_paneling
+			for jdx in 1:size(t)[1]
 				push!(added_panels, (x=SA[x1[jdx], x2[jdx], z_levels[i]],n=[1,0,0],dA=1))
 			end
 		end
@@ -370,7 +396,7 @@ begin
 	for_arc = panelize_arc(for_face)
 	aft_arc = panelize_arc(aft_face)
 	Plots.scatter(centers(panel_filter)[1], centers(panel_filter)[2], aspect_ratio=:equal)
-	Plots.scatter!(centers(for_arc)[1], centers(for_arc)[2])
+	Plots.scatter!(centers(for_arc)[1], centers(for_arc)[2],aspect_ratio=:equal)
 	Plots.scatter!(centers(aft_arc)[1], centers(aft_arc)[2])
 end
 
