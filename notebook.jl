@@ -249,7 +249,7 @@ begin
 end
 
 # ╔═╡ 4db0b387-cb18-4d3b-b111-23342e831156
-function plot_waterline(q, panels; kwargs...)
+function plot_waterline(q, panels; x_target=nothing, kwargs...)
 	waterline_panels = filter(iswaterline,panels)
 	waterline_x = first(centers(waterline_panels)) # x coordinates of waterline
 	waterline_height = map(waterline_panels.x) do cen
@@ -257,9 +257,11 @@ function plot_waterline(q, panels; kwargs...)
 		zeta(x,y,z) = 2* derivative(x->φ(SA[x,y,z],q,panels;kwargs...),x)
 		zeta(x,y,z) - z*derivative(z->zeta(x,y,z),z)
 	end
-	plot(waterline_x, waterline_height,c=:black,label=nothing)
-	scatter!(waterline_x, waterline_height, c=:black,label=nothing)
-end
+	myplot = plot(waterline_x, waterline_height,c=:black,label=nothing, ylabel=x_target)
+	myplot = scatter!(waterline_x, waterline_height, c=:black,label=nothing)
+
+	return myplot
+end;
 
 # ╔═╡ 9ab4f963-dc40-433a-9dfe-a7b56a1116ff
 begin
@@ -289,18 +291,29 @@ end;
 wave_drag(q,panels;kwargs...) = sum(panels) do pᵢ
 	cₚ = 1-u²(pᵢ.x,q,panels;kwargs...)
 	cₚ*pᵢ.n[1]*pᵢ.dA
-end; wave_drag(q,panels;G=kelvin,Fn)
+end; # wave_drag(q,panels;G=kelvin,Fn)
+
+# ╔═╡ 38262abf-5ac1-40b1-913a-d29f1288a5f6
+md"""
+The Resistance curve plotting takes a long time so enable the cell when you want to see it
+"""
 
 # ╔═╡ 3990037e-c31f-4742-91d3-28db9859ed05
+# ╠═╡ disabled = true
+#=╠═╡
 CwFn = map(0.16:0.015:0.35) do Fn
 	A = ∂ₙϕ.(panels,panels';G=kelvin,Fn,add_waterline=true)
 	q = A \ b
 	Cw = wave_drag(q,panels;G=kelvin,Fn,add_waterline=true)
 	(Fn=Fn,Cw=Cw)
 end |> Table;
+  ╠═╡ =#
 
 # ╔═╡ 382044bf-b33d-4ec3-aae1-1c24aa9116d6
+# ╠═╡ disabled = true
+#=╠═╡
 Plots.scatter(CwFn.Fn,1e4CwFn.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
+  ╠═╡ =#
 
 # ╔═╡ 425110f7-d7de-4555-b83b-1ecf8f30d515
 md"""
@@ -311,9 +324,9 @@ The first step in doing this is to define an `x_target`, which lies between $(-0
 """
 
 # ╔═╡ 67717f88-12e3-472d-97ca-9483fae30a04
-begin
+function slicing(x_target, panels)
 	panels_adapted = panels # copy over the panels
-	x_target = 0.4 # this defines the cut-off point!
+	# this defines the cut-off point!
 	
 	# filter out only the desired panels based on x coordinates
 	panel_filter = filter(row -> (abs(row.x[1]) <= x_target), panels_adapted)
@@ -324,9 +337,10 @@ begin
 	aft_face = filter(row -> row.x[1] ≈ min_x, panel_filter)
 
 	# plot to double check it works as expected
-	Plots.scatter(centers(panel_filter)[1], centers(panel_filter)[2],aspect_ratio=:equal)
-	Plots.scatter!(centers(for_face)[1], centers(for_face)[2])
-	Plots.scatter!(centers(aft_face)[1], centers(aft_face)[2])
+	# Plots.scatter(centers(panel_filter)[1], centers(panel_filter)[2],aspect_ratio=:equal)
+	# Plots.scatter!(centers(for_face)[1], centers(for_face)[2])
+	# Plots.scatter!(centers(aft_face)[1], centers(aft_face)[2])
+	return panel_filter, for_face, aft_face
 end
 
 # ╔═╡ adc2fe7d-896c-470f-b512-bb8c9fc92088
@@ -386,7 +400,10 @@ end
 
 # ╔═╡ fcef2341-6658-43e4-b5f3-fd602938f021
 begin 
-	function panelize_arc(face; n_paneling = 11)
+	function panelize_arc(face; n_paneling = 10)
+		#! Absolutely no points on the x axis
+		@assert n_paneling % 2 == 0
+		
 		z_levels = unique(centers(face)[3])
 
 		# very specific type...
@@ -454,12 +471,22 @@ begin
 			# this loop is going to fill the Array{NamedTuple{}} so the table can be constructed properly
 			for jdx in 1:size(t)[1]
 				normal = [nx[jdx],ny[jdx],nz] / sqrt(nx[jdx]^2 + ny[jdx]^2 + nz^2)
+
+				T1 = SA[rad*d_angle / sqrt(1+(nx[jdx]/ny[jdx])^2),
+				rad*d_angle*(nx[jdx]/ny[jdx]) / sqrt(1+(nx[jdx]/ny[jdx])^2),
+				0]
+
+				T2 = SA[0,
+				hz / sqrt(1 + (ny[jdx]/nz)^2),
+				hz*(ny[jdx]/nz) / sqrt(1 + (ny[jdx]/nz)^2)]
 				
+
+				#! pushing to the table!
 				push!(added_panels, (x=SA[x1[jdx], x2[jdx], z_levels[i]],
 				n = normal,
 				dA = arc_area,
-				T₁ = SA[1,0,0],
-				T₂ = SA[1,0,0]))
+				T₁ = T1,
+				T₂ = T2))
 			end
 		end
 		return added_panels |> Table
@@ -468,6 +495,7 @@ end
 
 # ╔═╡ 18778050-3488-4029-aeca-f503a3db8495
 begin
+	panel_filter, for_face, aft_face = slicing(0.45, panels)
 	for_arc = panelize_arc(for_face)
 	aft_arc = panelize_arc(aft_face)
 	Plots.scatter(centers(panel_filter)[1], centers(panel_filter)[2], aspect_ratio=:equal)
@@ -477,9 +505,123 @@ end
 
 # ╔═╡ 1ff65358-0115-4c62-9238-6555358ecb8c
 begin
-	arc_panels = append!(panel_filter, for_arc, aft_arc)
+	# merging the tables to create one table
+	arc_panels = copy(panel_filter)
+	append!(arc_panels, for_arc, aft_arc)
 	display(arc_panels)
 end
+
+# ╔═╡ 6d348006-325d-423a-af30-6e8046334aac
+md"""
+## Results
+"""
+
+# ╔═╡ b62a2129-cb4d-49e4-b312-ffcf7bd3f80f
+begin
+	b_arc = -Uₙ.(arc_panels;U)
+	A_arc = ∂ₙϕ.(arc_panels,arc_panels';G=kelvin,Fn,add_waterline=wl_check)
+	q_arc = A_arc \ b_arc; @assert A_arc * q_arc ≈ b_arc
+end;
+
+# ╔═╡ e6ac1309-5dcf-4a17-9342-791a23d9c72b
+plot_waterline(q_arc,arc_panels;G=kelvin,Fn,add_waterline=wl_check)
+
+# ╔═╡ 587865b0-8ac3-4ad1-8b08-f58f9e870f7f
+md"""
+![](https://github.com/weymouth/NumericalShipHydro/blob/8260a6a3d99b8d67340e82826452ad11640f5e3a/Wigley_waterline.png?raw=true)
+"""
+
+# ╔═╡ 757a53fe-305c-43bb-922f-e170401a7913
+wave_drag(q_arc,arc_panels;G=kelvin,Fn)
+
+# ╔═╡ 2c01e070-4387-4782-ba7a-eb582c2a1a8b
+# CwFn = map(0.16:0.015:0.3) do Fn
+# 	A_fn = ∂ₙϕ.(arc_panels,arc_panels';G=kelvin,Fn,add_waterline=true)
+# 	q_fn = A_fn \ b_arc
+# 	Cw = wave_drag(q,arc_panels;G=kelvin,Fn,add_waterline=true)
+# 	(Fn=Fn,Cw=Cw)
+# end |> Table;
+
+# ╔═╡ 6041b3da-85ac-413e-ad1e-70697c1c8b9e
+# Plots.scatter(CwFn.Fn,1e4CwFn.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
+
+# ╔═╡ 9b5e323e-96b3-4487-a9c4-a85040123b67
+md"""
+## Convergence Study
+Now that there is a positive initial result, a convergence study can be performed to test the hypothesis. To quickly recap, the expectation is that adjusting the cut-off point to be closer to the bow will improve the result. The result is also expected to improve with a finer discretization at the bow and stern.
+
+For the convergence study only the wave pattern will be considered. While there is a slight improvement in the resistance estimate it is still nowhere near a decent result. In combination with the fact that its relatively computaionaly expensive, it was decided it was not worth it to do this study.
+"""
+
+# ╔═╡ 334a2ed8-0106-4530-920c-4f83563f8465
+md"""
+### Cut Off Point
+First the cutoff point will be varied, to see the effect on the wave pattern. As the cut off point gets closer to the bow and stern, so aproaching 0.5, it is expected that the result should more closely match that in the literature. This is because the cut off changes the hull shape quite significantly, especially when the cut off is quite large. Smaller cut off sections will better approximate the wigley hull and therefore reduce the modelling error.
+"""
+
+# ╔═╡ ce422042-b877-4a9e-be06-ed98371f97a7
+begin
+	x_cutoffs = collect(0.36:0.04:0.48)
+
+	wave_plot_array = []
+
+	for idx in 1:size(x_cutoffs)[1]
+		x_target = x_cutoffs[idx]
+
+		local panel_filter, for_face, aft_face = slicing(x_target, panels)
+		local for_arc = panelize_arc(for_face)
+		local aft_arc = panelize_arc(aft_face)
+
+		local panels_slice = copy(panel_filter)
+		append!(panels_slice, for_arc, aft_arc)
+
+		local b_slice = -Uₙ.(panels_slice;U)
+		local A_slice = ∂ₙϕ.(panels_slice,panels_slice';G=kelvin,Fn,add_waterline=wl_check)
+		local q_slice = A_slice \ b_slice; @assert A_slice * q_slice ≈ b_slice
+
+		push!(wave_plot_array,plot_waterline(q_slice,panels_slice;G=kelvin,Fn,add_waterline=wl_check,x_target=x_target))
+	end
+
+end
+
+# ╔═╡ 67ee4684-1735-4c78-a606-9bcbeb635181
+Plots.plot(wave_plot_array...)
+
+# ╔═╡ 726d2ba0-c150-4853-954b-f14e838ad853
+md"""
+### Refining the Bow and Stern
+The next thing to test is if adding more points to the bow and stern improves the result at all. The default value is 10 panels per arc on every $z$ height of the bow and stern. This is already quite well resolved so most likely this will not result in a lot of change. However since the radius is quite small, and therefore the curvature quite large, a lot of panels should still be used for this region of the flow.
+"""
+
+# ╔═╡ b598c505-6a07-4123-b59b-df5e30831ef3
+begin
+	#range of panel numbers to test
+	n_panels = collect(4:4:16)
+
+	#! array to collect plots
+	n_plot_array = []
+	
+	x_target = 0.48
+	local panel_filter, for_face, aft_face = slicing(x_target, panels)
+	
+	for idx in 1:size(n_panels)[1]
+		local for_arc = panelize_arc(for_face; n_paneling=n_panels[idx])
+		local aft_arc = panelize_arc(aft_face; n_paneling=n_panels[idx])
+
+		panels_slice = copy(panel_filter)
+		append!(panels_slice, for_arc, aft_arc)
+
+		local b_slice = -Uₙ.(panels_slice;U)
+		local A_slice = ∂ₙϕ.(panels_slice,panels_slice';G=kelvin,Fn,add_waterline=wl_check)
+		local q_slice = A_slice \ b_slice; @assert A_slice * q_slice ≈ b_slice
+
+		push!(n_plot_array,plot_waterline(q_slice,panels_slice;G=kelvin,Fn,add_waterline=wl_check,x_target=n_panels[idx]))
+	end
+
+end
+
+# ╔═╡ 71156f8c-f841-4f5e-9a23-a47137e7499c
+Plots.plot(n_plot_array...)
 
 # ╔═╡ eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 plotly()
@@ -1758,6 +1900,7 @@ version = "1.4.1+1"
 # ╠═42f045da-48f2-47ce-8b99-1c7dd3ed83c3
 # ╠═97a3976c-7ad4-43a3-aae5-85631a723f76
 # ╠═be379aa0-7cac-45c6-991e-a4f739f7b70d
+# ╟─38262abf-5ac1-40b1-913a-d29f1288a5f6
 # ╠═3990037e-c31f-4742-91d3-28db9859ed05
 # ╠═382044bf-b33d-4ec3-aae1-1c24aa9116d6
 # ╟─425110f7-d7de-4555-b83b-1ecf8f30d515
@@ -1767,6 +1910,20 @@ version = "1.4.1+1"
 # ╠═fcef2341-6658-43e4-b5f3-fd602938f021
 # ╠═18778050-3488-4029-aeca-f503a3db8495
 # ╠═1ff65358-0115-4c62-9238-6555358ecb8c
+# ╟─6d348006-325d-423a-af30-6e8046334aac
+# ╠═b62a2129-cb4d-49e4-b312-ffcf7bd3f80f
+# ╠═e6ac1309-5dcf-4a17-9342-791a23d9c72b
+# ╟─587865b0-8ac3-4ad1-8b08-f58f9e870f7f
+# ╠═757a53fe-305c-43bb-922f-e170401a7913
+# ╠═2c01e070-4387-4782-ba7a-eb582c2a1a8b
+# ╠═6041b3da-85ac-413e-ad1e-70697c1c8b9e
+# ╟─9b5e323e-96b3-4487-a9c4-a85040123b67
+# ╟─334a2ed8-0106-4530-920c-4f83563f8465
+# ╠═ce422042-b877-4a9e-be06-ed98371f97a7
+# ╟─67ee4684-1735-4c78-a606-9bcbeb635181
+# ╟─726d2ba0-c150-4853-954b-f14e838ad853
+# ╠═b598c505-6a07-4123-b59b-df5e30831ef3
+# ╠═71156f8c-f841-4f5e-9a23-a47137e7499c
 # ╟─eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
