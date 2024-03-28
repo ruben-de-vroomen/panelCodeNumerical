@@ -87,7 +87,7 @@ md"""
 
 To test the hypothesis the following methodology has been applied. The first step is to adjust the bow shape to no longer include the infinitely sharp edge. Consider the following image.
 
-![Diagram of the bow](https://github.com/ruben-de-vroomen/panelCodeNumerical/blob/litstudy/dia.png?raw=true)
+![Diagram of the bow](https://github.com/ruben-de-vroomen/panelCodeNumerical/blob/tangents/dia.png?raw=true)
 
 
 """
@@ -281,7 +281,7 @@ The first step in doing this is to define an `x_target`, which lies between $(-0
 # ╔═╡ 67717f88-12e3-472d-97ca-9483fae30a04
 begin
 	panels_adapted = panels # copy over the panels
-	x_target = 0.4 # this defines the cut-off point!
+	x_target = 0.48 # this defines the cut-off point!
 	
 	# filter out only the desired panels based on x coordinates
 	panel_filter = filter(row -> (abs(row.x[1]) <= x_target), panels_adapted)
@@ -354,7 +354,10 @@ end
 
 # ╔═╡ fcef2341-6658-43e4-b5f3-fd602938f021
 begin 
-	function panelize_arc(face; n_paneling = 7)
+	function panelize_arc(face; n_paneling = 10)
+		#! Absolutely no points on the x axis
+		@assert n_paneling % 2 == 0
+		
 		z_levels = unique(centers(face)[3])
 
 		# very specific type...
@@ -458,7 +461,30 @@ begin
 	# merging the tables to create one table
 	arc_panels = copy(panel_filter)
 	append!(arc_panels, for_arc, aft_arc)
+	display(arc_panels)
 end
+
+# ╔═╡ 6d348006-325d-423a-af30-6e8046334aac
+md"""
+## Results
+"""
+
+# ╔═╡ b62a2129-cb4d-49e4-b312-ffcf7bd3f80f
+begin
+	# Fn = 0.325
+	# U = SA[-1,0,0]
+	b_arc = -Uₙ.(arc_panels;U)
+	A_arc = ∂ₙϕ.(arc_panels,arc_panels';G=kelvin,Fn,add_waterline=wl_check)
+	q_arc = A_arc \ b_arc; @assert A_arc * q_arc ≈ b_arc
+end;
+
+# ╔═╡ e6ac1309-5dcf-4a17-9342-791a23d9c72b
+plot_waterline(q_arc,arc_panels;G=kelvin,Fn,add_waterline=wl_check)
+
+# ╔═╡ 587865b0-8ac3-4ad1-8b08-f58f9e870f7f
+md"""
+![](https://github.com/weymouth/NumericalShipHydro/blob/8260a6a3d99b8d67340e82826452ad11640f5e3a/Wigley_waterline.png?raw=true)
+"""
 
 # ╔═╡ eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 plotly()
@@ -1746,6 +1772,10 @@ version = "1.4.1+1"
 # ╠═fcef2341-6658-43e4-b5f3-fd602938f021
 # ╠═18778050-3488-4029-aeca-f503a3db8495
 # ╠═1ff65358-0115-4c62-9238-6555358ecb8c
+# ╟─6d348006-325d-423a-af30-6e8046334aac
+# ╠═b62a2129-cb4d-49e4-b312-ffcf7bd3f80f
+# ╠═e6ac1309-5dcf-4a17-9342-791a23d9c72b
+# ╟─587865b0-8ac3-4ad1-8b08-f58f9e870f7f
 # ╟─eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
