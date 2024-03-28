@@ -31,6 +31,8 @@ md"""
 # Panel Method Improvements
 - Anna de Bever - 5144674
 - Ruben de Vroomen - 5140617
+
+Note: the notebook takes a while to run
 """
 
 # ╔═╡ a72de2fb-b2d9-45a2-ae06-d373b1d6126e
@@ -567,7 +569,17 @@ Plots.plot(wave_plot_array...)
 
 # ╔═╡ 61a4b394-2776-45c7-9908-12ce56222be0
 md"""
+The cut-off point was varied between 0.36, and 0.48. Where 0.36 is a very rounded off version, and 0.48 a much sharper bow version. All plots use the same number of points to discretize the bow and stern arc.
 
+From the plot above we do indeed see that making the bow sharper leads to better waterline behaviour. The difference is especially noticeable at the rear part of the waterline, as the hump is non-existent in the coarse simulation, and gradually gets resolved in the final simulation. 
+
+There is also some difference in the bow wave, though this is likely due to the fact that the more rounded bows effectively shorten the Length of the wigley hull.
+
+We also unfortunately see the down tick at the rear return in the last run. This suggests that the new method is not perfect. It could be the case that the simulation has not yet fully converged. Another possibility is that with this cut-off the bow has once again become too sharp in some sense, and the simulation starts to struggle again.
+
+Another possibility that was considered was if the modelling errors introduced for the arc panels are starting to have a larger influence. For example the tangent error on the panel could become too large if the curvature becomes too large again. However the paneling convergence below suggests this is not the case.
+
+Another possible problem is that the number of layers in the $z$ direction was not varied in this simulation. So the bow and stern paneling is no longer square, but instead very slender. Something to try would be to add more $z$ layers to get a more square paneling. This however will again lengthen the simualation time.
 """
 
 # ╔═╡ 726d2ba0-c150-4853-954b-f14e838ad853
@@ -605,6 +617,21 @@ end
 
 # ╔═╡ 71156f8c-f841-4f5e-9a23-a47137e7499c
 Plots.plot(n_plot_array...)
+
+# ╔═╡ 54f62d79-10f4-4e18-91c1-7887001684f0
+md"""
+The plot above shows very minimal changes, so adding extra panels along the bow and stern does not improve the results. This suggests the simulation has reasonably converged in this way. The other potential improvements above would be a better place to start in improving the simulation.
+"""
+
+# ╔═╡ 1b1069ca-286f-4d7a-9343-df972cd15809
+md"""
+## Conclusion
+From the above investigation it can be concluded that the linear numerical panel method has does have some areas of improvement, that can benefit the simulation. However the investigation shows that this method of adjusting the geometries only works well for the waterline, and has very little meaningful effect on the resistance estimate. Other methods of estimating the resistance are still much more useful.
+
+The investigation also does not tackle any of the underlying limitations of the simulation method. So this method will still likely only work well on slender hulls at low froude numbers. There is only a demonstrated improvement within this region.
+
+There are still also some areas of further improvement to investigate. Mainly the modelling errors introduced in the paneling of the bow and stern arcs could be improved by using more accurate formula's, or by making the mesh finer. Especially making the mesh finer in the z direction could yield good results for this specific case.
+"""
 
 # ╔═╡ eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 plotly()
@@ -1901,14 +1928,16 @@ version = "1.4.1+1"
 # ╠═2c01e070-4387-4782-ba7a-eb582c2a1a8b
 # ╟─6041b3da-85ac-413e-ad1e-70697c1c8b9e
 # ╟─d297122e-2492-4947-8126-f1d2a05f154a
-# ╠═9b5e323e-96b3-4487-a9c4-a85040123b67
+# ╟─9b5e323e-96b3-4487-a9c4-a85040123b67
 # ╟─334a2ed8-0106-4530-920c-4f83563f8465
 # ╠═ce422042-b877-4a9e-be06-ed98371f97a7
 # ╟─67ee4684-1735-4c78-a606-9bcbeb635181
-# ╠═61a4b394-2776-45c7-9908-12ce56222be0
+# ╟─61a4b394-2776-45c7-9908-12ce56222be0
 # ╟─726d2ba0-c150-4853-954b-f14e838ad853
 # ╠═b598c505-6a07-4123-b59b-df5e30831ef3
-# ╠═71156f8c-f841-4f5e-9a23-a47137e7499c
+# ╟─71156f8c-f841-4f5e-9a23-a47137e7499c
+# ╟─54f62d79-10f4-4e18-91c1-7887001684f0
+# ╟─1b1069ca-286f-4d7a-9343-df972cd15809
 # ╟─eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
