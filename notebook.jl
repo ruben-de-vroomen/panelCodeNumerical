@@ -31,6 +31,8 @@ md"""
 # Panel Method Improvements
 - Anna de Bever - 5144674
 - Ruben de Vroomen - 5140617
+
+Note: the notebook takes a while to run
 """
 
 # ╔═╡ 308ea71b-30a9-4872-9b7b-7be1f06977e3
@@ -271,7 +273,7 @@ end
 
 # ╔═╡ cfa862f8-c845-4c30-90c0-0e1a50afdbd7
 begin
-	Fn = 0.325
+	Fn = 0.316
 	U = SA[-1,0,0]
 	b = -Uₙ.(panels;U)
 	A = ∂ₙϕ.(panels,panels';G=kelvin,Fn,add_waterline=wl_check)
@@ -279,7 +281,7 @@ begin
 end
 
 # ╔═╡ 42f045da-48f2-47ce-8b99-1c7dd3ed83c3
-plot_waterline(q,panels;G=kelvin,Fn,add_waterline=wl_check)
+original_plot = plot_waterline(q,panels;G=kelvin,Fn,add_waterline=wl_check)
 
 # ╔═╡ 97a3976c-7ad4-43a3-aae5-85631a723f76
 begin
@@ -299,21 +301,15 @@ The Resistance curve plotting takes a long time so enable the cell when you want
 """
 
 # ╔═╡ 3990037e-c31f-4742-91d3-28db9859ed05
-# ╠═╡ disabled = true
-#=╠═╡
-CwFn = map(0.16:0.015:0.35) do Fn
+CwFn_original = map(0.16:0.015:0.35) do Fn
 	A = ∂ₙϕ.(panels,panels';G=kelvin,Fn,add_waterline=true)
 	q = A \ b
 	Cw = wave_drag(q,panels;G=kelvin,Fn,add_waterline=true)
 	(Fn=Fn,Cw=Cw)
 end |> Table;
-  ╠═╡ =#
 
 # ╔═╡ 382044bf-b33d-4ec3-aae1-1c24aa9116d6
-# ╠═╡ disabled = true
-#=╠═╡
-Plots.scatter(CwFn.Fn,1e4CwFn.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
-  ╠═╡ =#
+Plots.scatter(CwFn_original.Fn,1e4CwFn_original.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
 
 # ╔═╡ 425110f7-d7de-4555-b83b-1ecf8f30d515
 md"""
@@ -508,12 +504,12 @@ begin
 	# merging the tables to create one table
 	arc_panels = copy(panel_filter)
 	append!(arc_panels, for_arc, aft_arc)
-	display(arc_panels)
 end
 
 # ╔═╡ 6d348006-325d-423a-af30-6e8046334aac
 md"""
 ## Results
+Now that the post-processing of the wigley hull is complete, we can run the solver to see if it has any impact. 
 """
 
 # ╔═╡ b62a2129-cb4d-49e4-b312-ffcf7bd3f80f
@@ -524,31 +520,58 @@ begin
 end;
 
 # ╔═╡ e6ac1309-5dcf-4a17-9342-791a23d9c72b
-plot_waterline(q_arc,arc_panels;G=kelvin,Fn,add_waterline=wl_check)
+begin
+	new_plot = plot_waterline(q_arc,arc_panels;G=kelvin,Fn,add_waterline=wl_check)
+	Plots.plot(new_plot, original_plot)
+end
+
+# ╔═╡ f1d01556-45af-4c60-b298-226a3af066ca
+md"""
+The plots above show the waterlines along the hull for the new arced version (left), and the original wigley hull (right). We see that the resutl is not significantly different, but there are a few small differences. For comparison the experimental results have been put below.
+
+The first larger difference occurs at the rear of the waterline. In the new adjusted version we observe a much more clear upward arc like in the experimental resuslts. Whereas in the the original plot we still observe a downward tick.
+
+Another area of improvement can be seen between -0.2 and 0.0. The original plot has a bit more "noise", whereas the newly generated plot is a bit smoother.
+
+Unfortunately, we also observe that the hump at $x=-0.2$ has not really improved. The experimental data shows we would expect this hump at $x=-0.1$.
+
+Overall the new waterline shows some improvement, but could still be better.
+"""
 
 # ╔═╡ 587865b0-8ac3-4ad1-8b08-f58f9e870f7f
 md"""
 ![](https://github.com/weymouth/NumericalShipHydro/blob/8260a6a3d99b8d67340e82826452ad11640f5e3a/Wigley_waterline.png?raw=true)
 """
 
-# ╔═╡ 757a53fe-305c-43bb-922f-e170401a7913
-wave_drag(q_arc,arc_panels;G=kelvin,Fn)
+# ╔═╡ 2c4a2c0b-e0c4-404f-a4e7-fa5f9cf2088a
+md"""
+Next we can also look at the effect of the changes on the resistance plot
+"""
 
 # ╔═╡ 2c01e070-4387-4782-ba7a-eb582c2a1a8b
-# CwFn = map(0.16:0.015:0.3) do Fn
-# 	A_fn = ∂ₙϕ.(arc_panels,arc_panels';G=kelvin,Fn,add_waterline=true)
-# 	q_fn = A_fn \ b_arc
-# 	Cw = wave_drag(q,arc_panels;G=kelvin,Fn,add_waterline=true)
-# 	(Fn=Fn,Cw=Cw)
-# end |> Table;
+CwFn = map(0.16:0.015:0.35) do Fn
+	A_fn = ∂ₙϕ.(arc_panels,arc_panels';G=kelvin,Fn,add_waterline=true)
+	q_fn = A_fn \ b_arc
+	Cw = wave_drag(q_fn,arc_panels;G=kelvin,Fn,add_waterline=true)
+	(Fn=Fn,Cw=Cw)
+end |> Table;
 
 # ╔═╡ 6041b3da-85ac-413e-ad1e-70697c1c8b9e
-# Plots.scatter(CwFn.Fn,1e4CwFn.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
+Plots.scatter(CwFn.Fn,1e4CwFn.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
+
+# ╔═╡ d297122e-2492-4947-8126-f1d2a05f154a
+md"""
+The plot above shows the resistance for the new wigley hull. The only observable improvement is that the resistance is less negative at low froude numbers. But since the resistance is still below 0 it suggests no meaningful improvement has been made compared to the original wigley hull. This is against the expectation of the hypothesis.
+
+It is however roughly inline from what the literature predicted. A direct pressure integration along the hull simply does not work very well for this type of method. It could still be that the resistance estimate has been made worse due to the various modeling errors introduced into the new bow and stern. Especially since a lot of assumptions were made about the area of the panels, and one of the tangents is not perfectly representative.
+
+This means that for this type of panel code, the method used by marin's RAPID is still a better method for calculating the resistance.
+"""
 
 # ╔═╡ 9b5e323e-96b3-4487-a9c4-a85040123b67
 md"""
 ## Convergence Study
-Now that there is a positive initial result, a convergence study can be performed to test the hypothesis. To quickly recap, the expectation is that adjusting the cut-off point to be closer to the bow will improve the result. The result is also expected to improve with a finer discretization at the bow and stern.
+Now that there is a positive initial result, a convergence study can be performed to test the hypothesis. To quickly recap, the expectation is that adjusting the cut-off point to be closer to the bow will improve the result. We expect this because a smaller bow radius will better approximate the sharp bow of the wigely hull, while still allowing integration there. The result is also expected to improve with a finer discretization at the bow and stern.
 
 For the convergence study only the wave pattern will be considered. While there is a slight improvement in the resistance estimate it is still nowhere near a decent result. In combination with the fact that its relatively computaionaly expensive, it was decided it was not worth it to do this study.
 """
@@ -587,6 +610,21 @@ end
 # ╔═╡ 67ee4684-1735-4c78-a606-9bcbeb635181
 Plots.plot(wave_plot_array...)
 
+# ╔═╡ 61a4b394-2776-45c7-9908-12ce56222be0
+md"""
+The cut-off point was varied between 0.36, and 0.48. Where 0.36 is a very rounded off version, and 0.48 a much sharper bow version. All plots use the same number of points to discretize the bow and stern arc.
+
+From the plot above we do indeed see that making the bow sharper leads to better waterline behaviour. The difference is especially noticeable at the rear part of the waterline, as the hump is non-existent in the coarse simulation, and gradually gets resolved in the final simulation. 
+
+There is also some difference in the bow wave, though this is likely due to the fact that the more rounded bows effectively shorten the Length of the wigley hull.
+
+We also unfortunately see the down tick at the rear return in the last run. This suggests that the new method is not perfect. It could be the case that the simulation has not yet fully converged. Another possibility is that with this cut-off the bow has once again become too sharp in some sense, and the simulation starts to struggle again.
+
+Another possibility that was considered was if the modelling errors introduced for the arc panels are starting to have a larger influence. For example the tangent error on the panel could become too large if the curvature becomes too large again. However the paneling convergence below suggests this is not the case.
+
+Another possible problem is that the number of layers in the $z$ direction was not varied in this simulation. So the bow and stern paneling is no longer square, but instead very slender. Something to try would be to add more $z$ layers to get a more square paneling. This however will again lengthen the simualation time.
+"""
+
 # ╔═╡ 726d2ba0-c150-4853-954b-f14e838ad853
 md"""
 ### Refining the Bow and Stern
@@ -622,6 +660,21 @@ end
 
 # ╔═╡ 71156f8c-f841-4f5e-9a23-a47137e7499c
 Plots.plot(n_plot_array...)
+
+# ╔═╡ 54f62d79-10f4-4e18-91c1-7887001684f0
+md"""
+The plot above shows very minimal changes, so adding extra panels along the bow and stern does not improve the results. This suggests the simulation has reasonably converged in this way. The other potential improvements above would be a better place to start in improving the simulation.
+"""
+
+# ╔═╡ 1b1069ca-286f-4d7a-9343-df972cd15809
+md"""
+## Conclusion
+From the above investigation it can be concluded that the linear numerical panel method has does have some areas of improvement, that can benefit the simulation. However the investigation shows that this method of adjusting the geometries only works well for the waterline, and has very little meaningful effect on the resistance estimate. Other methods of estimating the resistance are still much more useful.
+
+The investigation also does not tackle any of the underlying limitations of the simulation method. So this method will still likely only work well on slender hulls at low froude numbers. There is only a demonstrated improvement within this region.
+
+There are still also some areas of further improvement to investigate. Mainly the modelling errors introduced in the paneling of the bow and stern arcs could be improved by using more accurate formula's, or by making the mesh finer. Especially making the mesh finer in the z direction could yield good results for this specific case.
+"""
 
 # ╔═╡ eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 plotly()
@@ -1912,18 +1965,23 @@ version = "1.4.1+1"
 # ╠═1ff65358-0115-4c62-9238-6555358ecb8c
 # ╟─6d348006-325d-423a-af30-6e8046334aac
 # ╠═b62a2129-cb4d-49e4-b312-ffcf7bd3f80f
-# ╠═e6ac1309-5dcf-4a17-9342-791a23d9c72b
+# ╟─e6ac1309-5dcf-4a17-9342-791a23d9c72b
+# ╟─f1d01556-45af-4c60-b298-226a3af066ca
 # ╟─587865b0-8ac3-4ad1-8b08-f58f9e870f7f
-# ╠═757a53fe-305c-43bb-922f-e170401a7913
+# ╟─2c4a2c0b-e0c4-404f-a4e7-fa5f9cf2088a
 # ╠═2c01e070-4387-4782-ba7a-eb582c2a1a8b
-# ╠═6041b3da-85ac-413e-ad1e-70697c1c8b9e
+# ╟─6041b3da-85ac-413e-ad1e-70697c1c8b9e
+# ╟─d297122e-2492-4947-8126-f1d2a05f154a
 # ╟─9b5e323e-96b3-4487-a9c4-a85040123b67
 # ╟─334a2ed8-0106-4530-920c-4f83563f8465
 # ╠═ce422042-b877-4a9e-be06-ed98371f97a7
 # ╟─67ee4684-1735-4c78-a606-9bcbeb635181
+# ╟─61a4b394-2776-45c7-9908-12ce56222be0
 # ╟─726d2ba0-c150-4853-954b-f14e838ad853
 # ╠═b598c505-6a07-4123-b59b-df5e30831ef3
-# ╠═71156f8c-f841-4f5e-9a23-a47137e7499c
+# ╟─71156f8c-f841-4f5e-9a23-a47137e7499c
+# ╟─54f62d79-10f4-4e18-91c1-7887001684f0
+# ╟─1b1069ca-286f-4d7a-9343-df972cd15809
 # ╟─eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
