@@ -214,7 +214,7 @@ function plot_waterline(q, panels; x_target=nothing, kwargs...)
 		zeta(x,y,z) = 2* derivative(x->φ(SA[x,y,z],q,panels;kwargs...),x)
 		zeta(x,y,z) - z*derivative(z->zeta(x,y,z),z)
 	end
-	myplot = plot(waterline_x, waterline_height,c=:black,label=nothing, xlabel=x_target)
+	myplot = plot(waterline_x, waterline_height,c=:black,label=nothing, ylabel=x_target)
 	myplot = scatter!(waterline_x, waterline_height, c=:black,label=nothing)
 
 	return myplot
@@ -519,23 +519,22 @@ First the cutoff point will be varied, to see the effect on the wave pattern. As
 # ╔═╡ ce422042-b877-4a9e-be06-ed98371f97a7
 begin
 	x_cutoffs = collect(0.36:0.04:0.48)
-	display(x_cutoffs)
 
 	wave_plot_array = []
 
 	for idx in 1:size(x_cutoffs)[1]
 		x_target = x_cutoffs[idx]
 
-		panel_filter, for_face, aft_face = slicing(x_target, panels)
-		for_arc = panelize_arc(for_face)
-		aft_arc = panelize_arc(aft_face)
+		local panel_filter, for_face, aft_face = slicing(x_target, panels)
+		local for_arc = panelize_arc(for_face)
+		local aft_arc = panelize_arc(aft_face)
 
-		panels_slice = copy(panel_filter)
+		local panels_slice = copy(panel_filter)
 		append!(panels_slice, for_arc, aft_arc)
 
-		b_slice = -Uₙ.(panels_slice;U)
-		A_slice = ∂ₙϕ.(panels_slice,panels_slice';G=kelvin,Fn,add_waterline=wl_check)
-		q_slice = A_slice \ b_slice; @assert A_slice * q_slice ≈ b_slice
+		local b_slice = -Uₙ.(panels_slice;U)
+		local A_slice = ∂ₙϕ.(panels_slice,panels_slice';G=kelvin,Fn,add_waterline=wl_check)
+		local q_slice = A_slice \ b_slice; @assert A_slice * q_slice ≈ b_slice
 
 		push!(wave_plot_array,plot_waterline(q_slice,panels_slice;G=kelvin,Fn,add_waterline=wl_check,x_target=x_target))
 	end
@@ -543,9 +542,43 @@ begin
 end
 
 # ╔═╡ 67ee4684-1735-4c78-a606-9bcbeb635181
+Plots.plot(wave_plot_array...)
+
+# ╔═╡ 726d2ba0-c150-4853-954b-f14e838ad853
+md"""
+### Refining the Bow and Stern
+The next thing to test is if adding more points to the bow and stern improves the result at all. The default value is 10 panels per arc on every $z$ height of the bow and stern. This is already quite well resolved so most likely this will not result in a lot of change. However since the radius is quite small, and therefore the curvature quite large, a lot of panels should still be used for this region of the flow.
+"""
+
+# ╔═╡ b598c505-6a07-4123-b59b-df5e30831ef3
 begin
-	Plots.plot(wave_plot_array...)
+	#range of panel numbers to test
+	n_panels = collect(4:4:16)
+
+	#! array to collect plots
+	n_plot_array = []
+	
+	x_target = 0.48
+	local panel_filter, for_face, aft_face = slicing(x_target, panels)
+	
+	for idx in 1:size(n_panels)[1]
+		local for_arc = panelize_arc(for_face; n_paneling=n_panels[idx])
+		local aft_arc = panelize_arc(aft_face; n_paneling=n_panels[idx])
+
+		panels_slice = copy(panel_filter)
+		append!(panels_slice, for_arc, aft_arc)
+
+		local b_slice = -Uₙ.(panels_slice;U)
+		local A_slice = ∂ₙϕ.(panels_slice,panels_slice';G=kelvin,Fn,add_waterline=wl_check)
+		local q_slice = A_slice \ b_slice; @assert A_slice * q_slice ≈ b_slice
+
+		push!(n_plot_array,plot_waterline(q_slice,panels_slice;G=kelvin,Fn,add_waterline=wl_check,x_target=n_panels[idx]))
+	end
+
 end
+
+# ╔═╡ 71156f8c-f841-4f5e-9a23-a47137e7499c
+Plots.plot(n_plot_array...)
 
 # ╔═╡ eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 plotly()
@@ -1843,7 +1876,10 @@ version = "1.4.1+1"
 # ╟─9b5e323e-96b3-4487-a9c4-a85040123b67
 # ╟─334a2ed8-0106-4530-920c-4f83563f8465
 # ╠═ce422042-b877-4a9e-be06-ed98371f97a7
-# ╠═67ee4684-1735-4c78-a606-9bcbeb635181
+# ╟─67ee4684-1735-4c78-a606-9bcbeb635181
+# ╟─726d2ba0-c150-4853-954b-f14e838ad853
+# ╠═b598c505-6a07-4123-b59b-df5e30831ef3
+# ╠═71156f8c-f841-4f5e-9a23-a47137e7499c
 # ╟─eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
