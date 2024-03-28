@@ -498,6 +498,25 @@ end |> Table;
 # ╔═╡ 6041b3da-85ac-413e-ad1e-70697c1c8b9e
 Plots.scatter(CwFn.Fn,1e4CwFn.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
 
+# ╔═╡ 9b5e323e-96b3-4487-a9c4-a85040123b67
+md"""
+## Convergence Study
+Now that there is a positive initial result, a convergence study can be performed to test the hypothesis. To quickly recap, the expectation is that adjusting the cut-off point to be closer to the bow will improve the result. The result is also expected to improve with a finer discretization at the bow and stern.
+
+For the convergence study only the wave pattern will be considered. While there is a slight improvement in the resistance estimate it is still nowhere near a decent result. In combination with the fact that its relatively computaionaly expensive, it was decided it was not worth it to do this study.
+"""
+
+# ╔═╡ 334a2ed8-0106-4530-920c-4f83563f8465
+md"""
+### Cut Off Point
+First the cutoff point will be varied, to see the effect on the wave pattern. As the cut off point gets closer to the bow and stern, so aproaching 0.5, it is expected that the result should more closely match that in the literature. This is because the cut off changes the hull shape quite significantly, especially when the cut off is quite large. Smaller cut off sections will better approximate the wigley hull and therefore reduce the modelling error.
+"""
+
+# ╔═╡ ce422042-b877-4a9e-be06-ed98371f97a7
+begin
+	x_cutoffs = collect(0.38:0.01:0.48)
+end
+
 # ╔═╡ eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 plotly()
 
@@ -1791,6 +1810,9 @@ version = "1.4.1+1"
 # ╠═757a53fe-305c-43bb-922f-e170401a7913
 # ╠═2c01e070-4387-4782-ba7a-eb582c2a1a8b
 # ╠═6041b3da-85ac-413e-ad1e-70697c1c8b9e
+# ╟─9b5e323e-96b3-4487-a9c4-a85040123b67
+# ╟─334a2ed8-0106-4530-920c-4f83563f8465
+# ╠═ce422042-b877-4a9e-be06-ed98371f97a7
 # ╟─eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
