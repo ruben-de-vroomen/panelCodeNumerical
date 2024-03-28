@@ -228,7 +228,7 @@ end
 
 # ╔═╡ cfa862f8-c845-4c30-90c0-0e1a50afdbd7
 begin
-	Fn = 0.325
+	Fn = 0.316
 	U = SA[-1,0,0]
 	b = -Uₙ.(panels;U)
 	A = ∂ₙϕ.(panels,panels';G=kelvin,Fn,add_waterline=wl_check)
@@ -236,7 +236,7 @@ begin
 end
 
 # ╔═╡ 42f045da-48f2-47ce-8b99-1c7dd3ed83c3
-plot_waterline(q,panels;G=kelvin,Fn,add_waterline=wl_check)
+original_plot = plot_waterline(q,panels;G=kelvin,Fn,add_waterline=wl_check)
 
 # ╔═╡ 97a3976c-7ad4-43a3-aae5-85631a723f76
 begin
@@ -256,21 +256,15 @@ The Resistance curve plotting takes a long time so enable the cell when you want
 """
 
 # ╔═╡ 3990037e-c31f-4742-91d3-28db9859ed05
-# ╠═╡ disabled = true
-#=╠═╡
-CwFn = map(0.16:0.015:0.35) do Fn
+CwFn_original = map(0.16:0.015:0.35) do Fn
 	A = ∂ₙϕ.(panels,panels';G=kelvin,Fn,add_waterline=true)
 	q = A \ b
 	Cw = wave_drag(q,panels;G=kelvin,Fn,add_waterline=true)
 	(Fn=Fn,Cw=Cw)
 end |> Table;
-  ╠═╡ =#
 
 # ╔═╡ 382044bf-b33d-4ec3-aae1-1c24aa9116d6
-# ╠═╡ disabled = true
-#=╠═╡
-Plots.scatter(CwFn.Fn,1e4CwFn.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
-  ╠═╡ =#
+Plots.scatter(CwFn_original.Fn,1e4CwFn_original.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
 
 # ╔═╡ 425110f7-d7de-4555-b83b-1ecf8f30d515
 md"""
@@ -465,12 +459,12 @@ begin
 	# merging the tables to create one table
 	arc_panels = copy(panel_filter)
 	append!(arc_panels, for_arc, aft_arc)
-	display(arc_panels)
 end
 
 # ╔═╡ 6d348006-325d-423a-af30-6e8046334aac
 md"""
 ## Results
+Now that the post-processing of the wigley hull is complete, we can run the solver to see if it has any impact. 
 """
 
 # ╔═╡ b62a2129-cb4d-49e4-b312-ffcf7bd3f80f
@@ -481,26 +475,51 @@ begin
 end;
 
 # ╔═╡ e6ac1309-5dcf-4a17-9342-791a23d9c72b
-plot_waterline(q_arc,arc_panels;G=kelvin,Fn,add_waterline=wl_check)
+begin
+	new_plot = plot_waterline(q_arc,arc_panels;G=kelvin,Fn,add_waterline=wl_check)
+	Plots.plot(new_plot, original_plot)
+end
+
+# ╔═╡ f1d01556-45af-4c60-b298-226a3af066ca
+md"""
+The plots above show the waterlines along the hull for the new arced version (left), and the original wigley hull (right). We see that the resutl is not significantly different, but there are a few small differences. For comparison the experimental results have been put below.
+
+The first larger difference occurs at the rear of the waterline. In the new adjusted version we observe a much more clear upward arc like in the experimental resuslts. Whereas in the the original plot we still observe a downward tick.
+
+Another area of improvement can be seen between -0.2 and 0.0. The original plot has a bit more "noise", whereas the newly generated plot is a bit smoother.
+
+Unfortunately, we also observe that the hump at $x=-0.2$ has not really improved. The experimental data shows we would expect this hump at $x=-0.1$.
+
+Overall the new waterline shows some improvement, but could still be better.
+"""
 
 # ╔═╡ 587865b0-8ac3-4ad1-8b08-f58f9e870f7f
 md"""
 ![](https://github.com/weymouth/NumericalShipHydro/blob/8260a6a3d99b8d67340e82826452ad11640f5e3a/Wigley_waterline.png?raw=true)
 """
 
-# ╔═╡ 757a53fe-305c-43bb-922f-e170401a7913
-wave_drag(q_arc,arc_panels;G=kelvin,Fn)
+# ╔═╡ 2c4a2c0b-e0c4-404f-a4e7-fa5f9cf2088a
+md"""
+Next we can also look at the effect of the changes on the resistance plot
+"""
 
 # ╔═╡ 2c01e070-4387-4782-ba7a-eb582c2a1a8b
-# CwFn = map(0.16:0.015:0.3) do Fn
-# 	A_fn = ∂ₙϕ.(arc_panels,arc_panels';G=kelvin,Fn,add_waterline=true)
-# 	q_fn = A_fn \ b_arc
-# 	Cw = wave_drag(q,arc_panels;G=kelvin,Fn,add_waterline=true)
-# 	(Fn=Fn,Cw=Cw)
-# end |> Table;
+CwFn = map(0.16:0.015:0.35) do Fn
+	A_fn = ∂ₙϕ.(arc_panels,arc_panels';G=kelvin,Fn,add_waterline=true)
+	q_fn = A_fn \ b_arc
+	Cw = wave_drag(q_fn,arc_panels;G=kelvin,Fn,add_waterline=true)
+	(Fn=Fn,Cw=Cw)
+end |> Table;
 
 # ╔═╡ 6041b3da-85ac-413e-ad1e-70697c1c8b9e
-# Plots.scatter(CwFn.Fn,1e4CwFn.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
+Plots.scatter(CwFn.Fn,1e4CwFn.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
+
+# ╔═╡ d297122e-2492-4947-8126-f1d2a05f154a
+md"""
+The plot above shows the resistance for the new wigley hull. The only observable improvement is that the resistance is less negative at low froude numbers. But since the resistance is still below 0 it suggests no meaningful improvement has been made compared to the original wigley hull. This is against the expectation of the hypothesis.
+
+It is however roughly inline from what the literature predicted. A direct pressure integration along the hull simply does not work very well for this type of method. It could still be that the resistance estimate has been made worse due to the various modeling errors introduced into the new bow and stern.
+"""
 
 # ╔═╡ 9b5e323e-96b3-4487-a9c4-a85040123b67
 md"""
@@ -1868,11 +1887,13 @@ version = "1.4.1+1"
 # ╠═1ff65358-0115-4c62-9238-6555358ecb8c
 # ╟─6d348006-325d-423a-af30-6e8046334aac
 # ╠═b62a2129-cb4d-49e4-b312-ffcf7bd3f80f
-# ╠═e6ac1309-5dcf-4a17-9342-791a23d9c72b
+# ╟─e6ac1309-5dcf-4a17-9342-791a23d9c72b
+# ╟─f1d01556-45af-4c60-b298-226a3af066ca
 # ╟─587865b0-8ac3-4ad1-8b08-f58f9e870f7f
-# ╠═757a53fe-305c-43bb-922f-e170401a7913
+# ╟─2c4a2c0b-e0c4-404f-a4e7-fa5f9cf2088a
 # ╠═2c01e070-4387-4782-ba7a-eb582c2a1a8b
-# ╠═6041b3da-85ac-413e-ad1e-70697c1c8b9e
+# ╟─6041b3da-85ac-413e-ad1e-70697c1c8b9e
+# ╠═d297122e-2492-4947-8126-f1d2a05f154a
 # ╟─9b5e323e-96b3-4487-a9c4-a85040123b67
 # ╟─334a2ed8-0106-4530-920c-4f83563f8465
 # ╠═ce422042-b877-4a9e-be06-ed98371f97a7
