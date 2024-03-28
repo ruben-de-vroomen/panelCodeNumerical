@@ -246,18 +246,29 @@ end;
 wave_drag(q,panels;kwargs...) = sum(panels) do pᵢ
 	cₚ = 1-u²(pᵢ.x,q,panels;kwargs...)
 	cₚ*pᵢ.n[1]*pᵢ.dA
-end; wave_drag(q,panels;G=kelvin,Fn)
+end; # wave_drag(q,panels;G=kelvin,Fn)
+
+# ╔═╡ 38262abf-5ac1-40b1-913a-d29f1288a5f6
+md"""
+The Resistance curve plotting takes a long time so enable the cell when you want to see it
+"""
 
 # ╔═╡ 3990037e-c31f-4742-91d3-28db9859ed05
+# ╠═╡ disabled = true
+#=╠═╡
 CwFn = map(0.16:0.015:0.35) do Fn
 	A = ∂ₙϕ.(panels,panels';G=kelvin,Fn,add_waterline=true)
 	q = A \ b
 	Cw = wave_drag(q,panels;G=kelvin,Fn,add_waterline=true)
 	(Fn=Fn,Cw=Cw)
 end |> Table;
+  ╠═╡ =#
 
 # ╔═╡ 382044bf-b33d-4ec3-aae1-1c24aa9116d6
+# ╠═╡ disabled = true
+#=╠═╡
 Plots.scatter(CwFn.Fn,1e4CwFn.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
+  ╠═╡ =#
 
 # ╔═╡ 425110f7-d7de-4555-b83b-1ecf8f30d515
 md"""
@@ -343,7 +354,7 @@ end
 
 # ╔═╡ fcef2341-6658-43e4-b5f3-fd602938f021
 begin 
-	function panelize_arc(face; n_paneling = 11)
+	function panelize_arc(face; n_paneling = 7)
 		z_levels = unique(centers(face)[3])
 
 		# very specific type...
@@ -435,17 +446,18 @@ end
 
 # ╔═╡ 18778050-3488-4029-aeca-f503a3db8495
 begin
-	# for_arc = panelize_arc(for_face)
-	# aft_arc = panelize_arc(aft_face)
+	for_arc = panelize_arc(for_face)
+	aft_arc = panelize_arc(aft_face)
 	Plots.scatter(centers(panel_filter)[1], centers(panel_filter)[2], aspect_ratio=:equal)
-	# Plots.scatter!(centers(for_arc)[1], centers(for_arc)[2],aspect_ratio=:equal)
-	# Plots.scatter!(centers(aft_arc)[1], centers(aft_arc)[2])
+	Plots.scatter!(centers(for_arc)[1], centers(for_arc)[2],aspect_ratio=:equal)
+	Plots.scatter!(centers(aft_arc)[1], centers(aft_arc)[2])
 end
 
 # ╔═╡ 1ff65358-0115-4c62-9238-6555358ecb8c
 begin
-	# arc_panels = append!(panel_filter, for_arc, aft_arc)
-	# display(arc_panels)
+	# merging the tables to create one table
+	arc_panels = copy(panel_filter)
+	append!(arc_panels, for_arc, aft_arc)
 end
 
 # ╔═╡ eb79419e-df92-4bd3-98e1-5e57bb7b45c5
@@ -1724,6 +1736,7 @@ version = "1.4.1+1"
 # ╠═42f045da-48f2-47ce-8b99-1c7dd3ed83c3
 # ╠═97a3976c-7ad4-43a3-aae5-85631a723f76
 # ╠═be379aa0-7cac-45c6-991e-a4f739f7b70d
+# ╟─38262abf-5ac1-40b1-913a-d29f1288a5f6
 # ╠═3990037e-c31f-4742-91d3-28db9859ed05
 # ╠═382044bf-b33d-4ec3-aae1-1c24aa9116d6
 # ╟─425110f7-d7de-4555-b83b-1ecf8f30d515
