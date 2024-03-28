@@ -471,8 +471,6 @@ md"""
 
 # ╔═╡ b62a2129-cb4d-49e4-b312-ffcf7bd3f80f
 begin
-	# Fn = 0.325
-	# U = SA[-1,0,0]
 	b_arc = -Uₙ.(arc_panels;U)
 	A_arc = ∂ₙϕ.(arc_panels,arc_panels';G=kelvin,Fn,add_waterline=wl_check)
 	q_arc = A_arc \ b_arc; @assert A_arc * q_arc ≈ b_arc
@@ -485,6 +483,20 @@ plot_waterline(q_arc,arc_panels;G=kelvin,Fn,add_waterline=wl_check)
 md"""
 ![](https://github.com/weymouth/NumericalShipHydro/blob/8260a6a3d99b8d67340e82826452ad11640f5e3a/Wigley_waterline.png?raw=true)
 """
+
+# ╔═╡ 757a53fe-305c-43bb-922f-e170401a7913
+wave_drag(q_arc,arc_panels;G=kelvin,Fn)
+
+# ╔═╡ 2c01e070-4387-4782-ba7a-eb582c2a1a8b
+CwFn = map(0.16:0.015:0.3) do Fn
+	A_fn = ∂ₙϕ.(arc_panels,arc_panels';G=kelvin,Fn,add_waterline=true)
+	q_fn = A_fn \ b_arc
+	Cw = wave_drag(q,arc_panels;G=kelvin,Fn,add_waterline=true)
+	(Fn=Fn,Cw=Cw)
+end |> Table;
+
+# ╔═╡ 6041b3da-85ac-413e-ad1e-70697c1c8b9e
+Plots.scatter(CwFn.Fn,1e4CwFn.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
 
 # ╔═╡ eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 plotly()
@@ -1776,6 +1788,9 @@ version = "1.4.1+1"
 # ╠═b62a2129-cb4d-49e4-b312-ffcf7bd3f80f
 # ╠═e6ac1309-5dcf-4a17-9342-791a23d9c72b
 # ╟─587865b0-8ac3-4ad1-8b08-f58f9e870f7f
+# ╠═757a53fe-305c-43bb-922f-e170401a7913
+# ╠═2c01e070-4387-4782-ba7a-eb582c2a1a8b
+# ╠═6041b3da-85ac-413e-ad1e-70697c1c8b9e
 # ╟─eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
