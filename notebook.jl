@@ -236,9 +236,32 @@ end
 # ╔═╡ 42f045da-48f2-47ce-8b99-1c7dd3ed83c3
 plot_waterline(q,panels;G=kelvin,Fn,add_waterline=wl_check)
 
+# ╔═╡ 97a3976c-7ad4-43a3-aae5-85631a723f76
+begin
+	u²(x,q,panels;kwargs...) = sum(abs2,SA[-1,0,0]+∇φ(x,q,panels;kwargs...))
+	cₚᵪ = map(x->1-u²(x,q,panels;G=kelvin,Fn,add_waterline=true),panels.x)
+end;
+
+# ╔═╡ be379aa0-7cac-45c6-991e-a4f739f7b70d
+wave_drag(q,panels;kwargs...) = sum(panels) do pᵢ
+	cₚ = 1-u²(pᵢ.x,q,panels;kwargs...)
+	cₚ*pᵢ.n[1]*pᵢ.dA
+end; wave_drag(q,panels;G=kelvin,Fn)
+
+# ╔═╡ 3990037e-c31f-4742-91d3-28db9859ed05
+CwFn = map(0.16:0.015:0.35) do Fn
+	A = ∂ₙϕ.(panels,panels';G=kelvin,Fn,add_waterline=true)
+	q = A \ b
+	Cw = wave_drag(q,panels;G=kelvin,Fn,add_waterline=true)
+	(Fn=Fn,Cw=Cw)
+end |> Table;
+
+# ╔═╡ 382044bf-b33d-4ec3-aae1-1c24aa9116d6
+Plots.scatter(CwFn.Fn,1e4CwFn.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
+
 # ╔═╡ 425110f7-d7de-4555-b83b-1ecf8f30d515
 md"""
-## Adjustments
+## Adjustmenting the Panels
 Now that the baseline case from the lectures is working, the trial to improve the methods can begin. For this to work, the `Table` called `panels` will be postprocessed using the method described above, where the ends of the hull are chopped off and replaced with a cylindrical bow.
 
 The first step in doing this is to define an `x_target`, which lies between $(-0.5,0.5)$. This number will define the cut off point for the wigley hull. Next the front and rear faces of the hull can be extracted with a bit of filter magic. The figure below shows this.
@@ -353,8 +376,6 @@ begin
 
 			
 			angle = atan(p_point.n[2] / p_point.n[1])
-			# atan(y)
-			# atan2(y,x)
 
 			# defining the angle range
 			if angle > 0
@@ -365,7 +386,9 @@ begin
 				throw(DomainError(angle, "weird shit is happening to angle"))
 			end
 
-			d_angle = double_angle
+			# all new panels have the same area
+			d_angle = double_angle / n_paneling
+			arc_area = d_angle * rad * hz
 			
 			
 			# t only on new unique points...
@@ -375,16 +398,25 @@ begin
 				t = collect(range(-angle+pi, angle+pi, length=n_paneling))
 			end
 
-			display(bow_flag)
-			display(angle)
-			display(t)
-			
+			# point locations
 			x1 = loc[1] .+ rad*cos.(t)
 			x2 = loc[2] .+ rad*sin.(t)
 
+			#point normal vectors
+			b_scale = sqrt(1 - p_point.n[3]^2) #scaling factor
+			nx = b_scale*rad*cos.(t)
+			ny = b_scale*rad*sin.(t)
+			nz = p_point.n[3]
+
 			# this loop is going to fill the Array{NamedTuple{}} so the table can be constructed properly
 			for jdx in 1:size(t)[1]
-				push!(added_panels, (x=SA[x1[jdx], x2[jdx], z_levels[i]],n=[1,0,0],dA=1))
+				normal = [nx[jdx],ny[jdx],nz] / sqrt(nx[jdx]^2 + ny[jdx]^2 + nz^2)
+				
+				push!(added_panels, (x=SA[x1[jdx], x2[jdx], z_levels[i]],
+				n = normal,
+				dA = arc_area,
+				T₁ = SA[1,0,0],
+				T₂ = SA[1,0,0]))
 			end
 		end
 		return added_panels |> Table
@@ -398,6 +430,12 @@ begin
 	Plots.scatter(centers(panel_filter)[1], centers(panel_filter)[2], aspect_ratio=:equal)
 	Plots.scatter!(centers(for_arc)[1], centers(for_arc)[2],aspect_ratio=:equal)
 	Plots.scatter!(centers(aft_arc)[1], centers(aft_arc)[2])
+end
+
+# ╔═╡ 1ff65358-0115-4c62-9238-6555358ecb8c
+begin
+	arc_panels = append!(panel_filter, for_arc, aft_arc)
+	display(arc_panels)
 end
 
 # ╔═╡ eb79419e-df92-4bd3-98e1-5e57bb7b45c5
@@ -1674,12 +1712,17 @@ version = "1.4.1+1"
 # ╟─9ab4f963-dc40-433a-9dfe-a7b56a1116ff
 # ╠═cfa862f8-c845-4c30-90c0-0e1a50afdbd7
 # ╠═42f045da-48f2-47ce-8b99-1c7dd3ed83c3
+# ╠═97a3976c-7ad4-43a3-aae5-85631a723f76
+# ╠═be379aa0-7cac-45c6-991e-a4f739f7b70d
+# ╠═3990037e-c31f-4742-91d3-28db9859ed05
+# ╠═382044bf-b33d-4ec3-aae1-1c24aa9116d6
 # ╟─425110f7-d7de-4555-b83b-1ecf8f30d515
 # ╠═67717f88-12e3-472d-97ca-9483fae30a04
 # ╟─adc2fe7d-896c-470f-b512-bb8c9fc92088
 # ╠═5509c0e7-aac3-48b7-8dac-951e163215eb
 # ╠═fcef2341-6658-43e4-b5f3-fd602938f021
 # ╠═18778050-3488-4029-aeca-f503a3db8495
+# ╠═1ff65358-0115-4c62-9238-6555358ecb8c
 # ╟─eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
