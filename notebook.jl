@@ -411,12 +411,22 @@ begin
 			# this loop is going to fill the Array{NamedTuple{}} so the table can be constructed properly
 			for jdx in 1:size(t)[1]
 				normal = [nx[jdx],ny[jdx],nz] / sqrt(nx[jdx]^2 + ny[jdx]^2 + nz^2)
+
+				T1 = SA[rad*d_angle / sqrt(1+(nx[jdx]/ny[jdx])^2),
+				rad*d_angle*(nx[jdx]/ny[jdx]) / sqrt(1+(nx[jdx]/ny[jdx])^2),
+				0]
+
+				T2 = SA[0,
+				hz / sqrt(1 + (ny[jdx]/nz)^2),
+				hz*(ny[jdx]/nz) / sqrt(1 + (ny[jdx]/nz)^2)]
 				
+
+				#! pushing to the table!
 				push!(added_panels, (x=SA[x1[jdx], x2[jdx], z_levels[i]],
 				n = normal,
 				dA = arc_area,
-				T₁ = SA[1,0,0],
-				T₂ = SA[1,0,0]))
+				T₁ = T1,
+				T₂ = T2))
 			end
 		end
 		return added_panels |> Table
@@ -425,17 +435,17 @@ end
 
 # ╔═╡ 18778050-3488-4029-aeca-f503a3db8495
 begin
-	for_arc = panelize_arc(for_face)
-	aft_arc = panelize_arc(aft_face)
+	# for_arc = panelize_arc(for_face)
+	# aft_arc = panelize_arc(aft_face)
 	Plots.scatter(centers(panel_filter)[1], centers(panel_filter)[2], aspect_ratio=:equal)
-	Plots.scatter!(centers(for_arc)[1], centers(for_arc)[2],aspect_ratio=:equal)
-	Plots.scatter!(centers(aft_arc)[1], centers(aft_arc)[2])
+	# Plots.scatter!(centers(for_arc)[1], centers(for_arc)[2],aspect_ratio=:equal)
+	# Plots.scatter!(centers(aft_arc)[1], centers(aft_arc)[2])
 end
 
 # ╔═╡ 1ff65358-0115-4c62-9238-6555358ecb8c
 begin
-	arc_panels = append!(panel_filter, for_arc, aft_arc)
-	display(arc_panels)
+	# arc_panels = append!(panel_filter, for_arc, aft_arc)
+	# display(arc_panels)
 end
 
 # ╔═╡ eb79419e-df92-4bd3-98e1-5e57bb7b45c5
