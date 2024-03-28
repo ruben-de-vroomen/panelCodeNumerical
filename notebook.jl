@@ -518,13 +518,15 @@ Plots.scatter(CwFn.Fn,1e4CwFn.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
 md"""
 The plot above shows the resistance for the new wigley hull. The only observable improvement is that the resistance is less negative at low froude numbers. But since the resistance is still below 0 it suggests no meaningful improvement has been made compared to the original wigley hull. This is against the expectation of the hypothesis.
 
-It is however roughly inline from what the literature predicted. A direct pressure integration along the hull simply does not work very well for this type of method. It could still be that the resistance estimate has been made worse due to the various modeling errors introduced into the new bow and stern.
+It is however roughly inline from what the literature predicted. A direct pressure integration along the hull simply does not work very well for this type of method. It could still be that the resistance estimate has been made worse due to the various modeling errors introduced into the new bow and stern. Especially since a lot of assumptions were made about the area of the panels, and one of the tangents is not perfectly representative.
+
+This means that for this type of panel code, the method used by marin's RAPID is still a better method for calculating the resistance.
 """
 
 # ╔═╡ 9b5e323e-96b3-4487-a9c4-a85040123b67
 md"""
 ## Convergence Study
-Now that there is a positive initial result, a convergence study can be performed to test the hypothesis. To quickly recap, the expectation is that adjusting the cut-off point to be closer to the bow will improve the result. The result is also expected to improve with a finer discretization at the bow and stern.
+Now that there is a positive initial result, a convergence study can be performed to test the hypothesis. To quickly recap, the expectation is that adjusting the cut-off point to be closer to the bow will improve the result. We expect this because a smaller bow radius will better approximate the sharp bow of the wigely hull, while still allowing integration there. The result is also expected to improve with a finer discretization at the bow and stern.
 
 For the convergence study only the wave pattern will be considered. While there is a slight improvement in the resistance estimate it is still nowhere near a decent result. In combination with the fact that its relatively computaionaly expensive, it was decided it was not worth it to do this study.
 """
@@ -562,6 +564,11 @@ end
 
 # ╔═╡ 67ee4684-1735-4c78-a606-9bcbeb635181
 Plots.plot(wave_plot_array...)
+
+# ╔═╡ 61a4b394-2776-45c7-9908-12ce56222be0
+md"""
+
+"""
 
 # ╔═╡ 726d2ba0-c150-4853-954b-f14e838ad853
 md"""
@@ -1893,11 +1900,12 @@ version = "1.4.1+1"
 # ╟─2c4a2c0b-e0c4-404f-a4e7-fa5f9cf2088a
 # ╠═2c01e070-4387-4782-ba7a-eb582c2a1a8b
 # ╟─6041b3da-85ac-413e-ad1e-70697c1c8b9e
-# ╠═d297122e-2492-4947-8126-f1d2a05f154a
-# ╟─9b5e323e-96b3-4487-a9c4-a85040123b67
+# ╟─d297122e-2492-4947-8126-f1d2a05f154a
+# ╠═9b5e323e-96b3-4487-a9c4-a85040123b67
 # ╟─334a2ed8-0106-4530-920c-4f83563f8465
 # ╠═ce422042-b877-4a9e-be06-ed98371f97a7
 # ╟─67ee4684-1735-4c78-a606-9bcbeb635181
+# ╠═61a4b394-2776-45c7-9908-12ce56222be0
 # ╟─726d2ba0-c150-4853-954b-f14e838ad853
 # ╠═b598c505-6a07-4123-b59b-df5e30831ef3
 # ╠═71156f8c-f841-4f5e-9a23-a47137e7499c
