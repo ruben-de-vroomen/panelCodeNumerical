@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.40
+# v0.19.38
 
 using Markdown
 using InteractiveUtils
@@ -33,13 +33,24 @@ md"""
 - Ruben de Vroomen - 5140617
 """
 
+# ╔═╡ 308ea71b-30a9-4872-9b7b-7be1f06977e3
+md"""
+### TO DO'S
+	-Checken dat alle refrences daadwerkelijk doorlinken naar waar we willen
+	-Ref list/Bibliography
+	-Verwijzing naar Gabe erin zetten
+	-diagram of bow erin zetten
+"""
+
 # ╔═╡ a72de2fb-b2d9-45a2-ae06-d373b1d6126e
 md"""
 ## Introduction
 
-Being able to estimate the flow of fluid around a ship hull is important for a variety of reasons in marine engineering. In order to study the complex flows around difficult geometries, numerical methods must be used. One of these is the linear potential flow method, a panel method. This method is a relatively fast method compared to others such as cfd methods. Therefore if a panel method is sufficient to estimate a situation, it is more desireable than running more extensive simulations.
+Being able to estimate the flow of fluid around a ship hull is important for a variety of reasons in marine engineering. In order to study the complex flows around difficult geometries, numerical methods must be used. One of these is the linear potential flow method; a panel method. This method is a relatively fast method compared to others such as cfd methods. Therefore if a panel method is sufficient to estimate a situation, it is more desireable than running more extensive simulations.
 
-This project aims to try to improve the panel method's estimation by exploring one potential limitation of the panel method. One potential source of error are the areas of large curvature. (i.e. small radius). Therefore, this project will focus on the sharp leading and trailing edges of a standard wigley hull. The exact methodology will be discussed later on.
+This project aims to try to improve the panel method's estimation for wigley hulls by exploring one potential limitation of the panel method. One potential source of error are the areas of large curvature. (i.e. small radius). Therefore, this project will focus on the sharp leading and trailing edges of a standard wigley hull. The exact methodology will be discussed later on.
+
+This is done with the open source panel method package NeumannKelvin **VERWIJZING NAAR GABE's DING ERIN ZETTEN**
 """
 
 # ╔═╡ bfcd1719-8d8b-4035-8a81-ca9db14b19d2
@@ -52,22 +63,22 @@ Before starting any trials a small literature review was performed. The aim  of 
 # ╔═╡ 8509dff3-d008-40ce-b926-102fcc341a6a
 md"""
 ### Non-linear effects
-Multiple papers discussed the implications of a linear Neumann-Kelvin method, and the way it poorly estimates wave patterns, as the waves become non-linear. ([Yu, 2017](http://koreascience.or.kr/article/JAKO201707356126818.page)) outlines how as the froude number increases the non-linearity of the waves increases, and therefore the accuracy of the linear NK method decreases.
+Multiple papers discussed the implications of a linear Neumann-Kelvin method, and the way it poorly estimates wave patterns, as the waves become non-linear. [Yu, (2017](http://koreascience.or.kr/article/JAKO201707356126818.page)) outlines how as the froude number ($Fn$) increases the non-linearity of the waves increases, and therefore the accuracy of the linear Neumann-Kelvin (NK) method decreases.
 
-This makes sense, as the higher the $Fn$ the larger the waves we expect become. For the standard wigley, the accuracy significantly decreases after $Fn = 0.3$
+This makes sense, as the higher the $Fn$ the larger the expected waves become. For the standard wigley hull, this means the accuracy of the NK method significantly decreases for $Fn > 0.3$
 
-([Raven, 1998]()) also supports this. They explicitly choose to use a non-linear code exactly for this reason. This paper also acknowledges that for wave pattern, the exact paneling of the vessel is less important. For resistance they say the paneling of the vessel becomes extremely important, and that the resistance is very sensitive to the paneling method chosen. Therefore for the RAPID code developed by marin, they used a slightly different approach for the resistance estimation.
+[Raven (1998]()) also supports this. They explicitly choose to use a non-linear code exactly for this reason. This paper also acknowledges that when anayling the wave pattern, the exact paneling of the vessel is less important. For resistance they say the paneling of the vessel becomes extremely important, and that the resistance is very sensitive to the hull paneling method chosen. Therefore for the RAPID code developed by Marin, they used a slightly different approach for the resistance estimation.
 
-In fact, non-linear effects may influence the resisitence of the vessel up to 2 ship lengths behind the vessel. The paper therefore avoids a direct pressure integration, in favour of a seperate wave-pattern resistance method. However this struggles from its own issues as well.
+In fact, non-linear effects may influence the resisitence of the vessel up to two ship lengths behind the vessel. The paper therefore avoids a direct pressure integration, in favour of a seperate wave-pattern resistance method. However this suffers from its own issues as well.
 """
 
 # ╔═╡ abe10925-1a60-40c2-9cb9-d39c57de99f7
 md"""
 ### Slender Vessels
 
-Another important insight in this paper ([Yu, 2017](http://koreascience.or.kr/article/JAKO201707356126818.page)) is that the wave pattern also loses convergence at lower froude numbers for higher block coefficients. ([Raven, 1998]()) again supports this, saying they obtained quite good results for the slender vessels they tested.
+Another important insight from [Yu (2017)](http://koreascience.or.kr/article/JAKO201707356126818.page) is that the wave pattern does not convergerge at lower froude numbers for higher block coefficients. [Raven (1998)]() again supports this, saying they obtained quite good results for the slender vessels they tested.
 
-This suggests that the linear NK should be able to work relatively well on the wigley hull we intend to test out, as its a relatively slender hull form. ([Lawrence, 1987](https://www.researchgate.net/publication/297342995_NUMERICAL_ASPECTS_OF_THE_NEUMANN-KELVIN_PROBLEM)) also attempted to apply the Neumann Kelvin finding much the same issues. They also acknowledge an inherent limitation in the NK method, namely that any body that is thick enough to need a numerical simulation likely automatically does not conform to the linear approximations of the method.
+This suggests that the linear NK should be able to work relatively well on the wigley hull we intend to test out, as its a relatively slender hull form. [Lawrence, (1987)](https://www.researchgate.net/publication/297342995_NUMERICAL_ASPECTS_OF_THE_NEUMANN-KELVIN_PROBLEM) also attempted to apply the Neumann Kelvin method finding much the same issues. They also acknowledge an inherent limitation in the NK method, namely that any body that is thick enough to need a numerical simulation likely automatically does not conform to the linear approximations of the method.
 
 That is why for very slender vessels, another approach can be used, called the Neumann-Mitchel method. This method combines the Neumann Kelvin method with a linearised integral around the ship, to combine it with Mitchell's thin ship theory. ([Noblesse, 2013](https://link.springer.com/article/10.1007/s10665-012-9568-7#citeas)), ([Jiayi, 2018](https://iwwwfb2018.ensta-bretagne.fr/wp-content/uploads/2018/01/he.pdf)). These methods only work well with very thin vessels.
 """
@@ -78,7 +89,7 @@ md"""
 
 From the literature review we see that the linear Neumann-Kelvin method has some inherent disadvantages. Mainly the method performs poorly at high block coefficients, large froude numbers and isn't great for direct pressure integrations to find the resistance. Nevertheless, for low enough froude numbers and relatively slender vessels, such as the wigley hull, the method still has some decent potential. 
 
-The hypothesis is as follows. If the sharp bow and stern of the wigley hull is replaced by a rounded 'fillet', with a fine enough panneling, it is expected to see an improvement in the wave pattern, and especially the resistance f the vessel. This is becuase the infinite curvature of the sharp bow and stern dont play well with pressure integrations, so rounding them off should help with this. It is expected to see more improvement in the resistance estimate, relative to the wave pattern, as the NK method is generally more sensitive to different pannelings in this area.
+The hypothesis is as follows: If the sharp bow and stern of the wigley hull is replaced by a rounded 'fillet', with a fine enough panneling, it is expected to see an improvement in the wave pattern, and especially the accuracy of the resistance modeling of the vessel. This is becuase the infinite curvature of the sharp bow and stern do not work well with pressure integrations, so rounding them off should help with this. It is expected to see a higher improvement in the resistance estimate, compared to the wave pattern, as the NK method is generally more sensitive to different panneling in this area.
 """
 
 # ╔═╡ a3af56b8-e0a5-4f28-a9e6-0a2d883440f7
@@ -87,7 +98,7 @@ md"""
 
 To test the hypothesis the following methodology has been applied. The first step is to adjust the bow shape to no longer include the infinitely sharp edge. Consider the following image.
 
-![Diagram of the bow](https://github.com/ruben-de-vroomen/panelCodeNumerical/blob/litstudy/dia.png?raw=true)
+![Diagram of the bow](https://github.com/ruben-de-vroomen/panelCodeNumerical/blob/tangents/dia.png?raw=true)
 
 
 """
@@ -96,23 +107,55 @@ To test the hypothesis the following methodology has been applied. The first ste
 md"""
 This image shows a slice of the wigley hull in the $xy$ plane. (i.e. camera angle in pure z topdown view). In red we have the discretized panel centers along the bow of the wigley hull. The bow will be rounded using the following method.
 
-First the first $n$ panels at the start will be disregarded. In the image this means every point lying inside the threshold distance in ignored. Next the circle with radius r must be added. 
+First the first $n$ panels at the start will be disregarded. In the image this means every point lying inside the threshold distance is ignored. Next the circle with radius r must be added. 
 
 The new front most panel shares a tangent vector in the $xy$ plane with the circle we want to add. Because we already know quite a lot about this panel, its relatively easy to calculate the radius and location of the circle.
 
-The circle's centre simply lies in the crossing point of the $x$ axis, and the normal vector of this panel. (note the normal vector must be projected onto the $xy$ plane to make this work.) The radius is simply the distance from the panel center to the $x$ axis along the projected normal vector.
+The circle's centre simply lies in the crossing point of the $x$ axis, and the normal vector of this panel. (note the normal vector must be projected onto the $xy$ plane to make this work.) The radius is simply the distance from the panel center to the $x$ axis along the projected normal vector. The calcualation of this is done with the function radiusLocation as defined later in the notebook.
 
 With this information, the circle can now be discretized over the front part, labeled `S_b`. This discretization will be made very fine in order to try and capture the pressures at the bow. This process will then be repeated for every z slice of the wigley hull.
+
+For these front panels other variables must also be calculated. For each panel the area (A), normal vector (n) and two tangents (T₁ and T₂) must be defined. This is all done in the function panelize_arc. 
+
+For the area of each panel the approximation is taken that it is a fixed cylinder slice. See this image:
+
+![Diagram of panel area approximation](https://github.com/ruben-de-vroomen/panelCodeNumerical/blob/text/Panel%20area.png?raw=true)
+
+As shown for the area the normal is approximated to disregard a Z component and the radius is considered constant. As this will not be the case if such a filet is applied, this introduces a modeling error. However this will probably only have a very small effect. The area is calculated as $dz * r * dθ$ where dθ is tha angle of the cylinder that the panel must cover. 
+
+The normal vector for a row of panels (same z value) is taken to have the same z orientation as the last panel of the original wigley hull before the cut off ($n_0$). The x and y componets can be calculated using the radius and angle. To normalize this together the z component and the x and y components must be at the same scale. The lenght in the xy-plane of the original normal vector can be used for this. The lenght of this component is $\sqrt{1² - n_{0z}²}$. This means the final vector is composed in the following way:
+
+$n_{1x} = r * cos(\theta) * \sqrt{1^2 - n_{0z}^2}$
+$n_{1y} = r * sin(\theta) * \sqrt{1^2 - n_{0z}^2}$
+$n_{1z} = n_{0z}$
+
+For the tangents these must be taken in the yz- and xy- planes. These components must be ortogonal to the normal vector. Additionally these tangents must be the lenght of the panel. This gives the following two tangential vectors.
+
+$T_{1x} = r d\theta * \frac{1}{\sqrt{1^2 + (\frac{n_{1x}}{n_{1y}})^2}}$
+$T_{1y} = r d\theta * \frac{\frac{n_{1x}}{n_{1y}}}{\sqrt{1^2 + (\frac{n_{1x}}{n_{1y}})^2}}$
+$T_{1z} = 0$
+
+$T_{2x} = 0$
+$T_{2y} = dz * \frac{1}{\sqrt{1^2 + (\frac{n_{1y}}{n_{1z}})^2}}$
+$T_{2z} = dz * \frac{\frac{n_{1y}}{n_{1z}}}{\sqrt{1^2 + (\frac{n_{1y}}{n_{1z}})^2}}$
+
+These vectors are approximation of the real panel and thus will induce minor modelling errors. These tangents are mainly used to mark the end of the panels, so that boundry conditions can be checked and gauss point can be calculated. In the case of T₁ the approximation looks as follows:
+
+![Diagram of tangential stuffs](https://github.com/ruben-de-vroomen/panelCodeNumerical/blob/text/Tangents.png?raw=true)
+
+Where the blue line is the approximation for the tangent while the black line is the realistic shape. What is visible is that for weak curvature or small pannels this difference becomes negligable. This means that if the panels are smaller or the radius larger this modeling error becomes smaller. 
+
+In the case of T₂ the approximation is made is that the panel height along the surface is the same as the height along the z-axis. As the panels are not alliged with the z-axis but at an angle this creates a modeling error. Near the surface boundry this could become relevant as the panel is longer than is modeled, and as such might reach the surface earlier. However it is assumed that this effect is negligable in comparison to some of the other approximations made. 
 """
 
 # ╔═╡ 2f8a4a3b-a665-4a22-9d1e-b21ce193e6ad
 md"""
 ### Next Steps
-After the bow and stern have been processed into the `Table` of panels, the radius will be varied. This is done by choosing a large number of points along the $x$ axis, and then varying the number of panels on the bow we are excluding. The less points you exclude, the sharper your simulated bow. But crucially this sharp bow is discretized into panels.
+After the bow and stern have been processed into the `Table` of panels, the radius will be varied. This is done by choosing a large number of points along the $x$ axis as cut off locations and thus changing the number of panels on the bow we are replacing.   
 
 The expectation is that the smaller the radius is, the better this method apporoaches the original wigley hull. This should reduce the extra modelling error introduced. The larger the bow and stern radius is, the larger this modelling error becomes (at least compared to the original wigley hull).
 
-The extra panelling at the bow and stern is expected to be better at approximating the total resistance of the wigely hull.
+The extra panelling at the bow and stern is expected to be better at approximating the total resistance of the wigely hull, as there is no longer a sharp point, rather a smooth curve to be integrated at the bow and stern. 
 """
 
 # ╔═╡ 55548640-75a4-48b8-9e81-d887fda2fdce
@@ -464,7 +507,7 @@ TypedTables = "~1.4.6"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.2"
+julia_version = "1.10.1"
 manifest_format = "2.0"
 project_hash = "3ed42454ac420cbb0820bd35d56a6b46a6ef5c13"
 
@@ -1691,12 +1734,13 @@ version = "1.4.1+1"
 
 # ╔═╡ Cell order:
 # ╟─eb38f380-e2b2-11ee-373f-c9d7d40ee588
+# ╠═308ea71b-30a9-4872-9b7b-7be1f06977e3
 # ╟─a72de2fb-b2d9-45a2-ae06-d373b1d6126e
 # ╟─bfcd1719-8d8b-4035-8a81-ca9db14b19d2
 # ╟─8509dff3-d008-40ce-b926-102fcc341a6a
 # ╟─abe10925-1a60-40c2-9cb9-d39c57de99f7
 # ╟─82882880-0058-4e05-af55-39810893e55a
-# ╟─a3af56b8-e0a5-4f28-a9e6-0a2d883440f7
+# ╠═a3af56b8-e0a5-4f28-a9e6-0a2d883440f7
 # ╟─bd03c35d-942d-4708-b086-4cb1c45c4160
 # ╟─2f8a4a3b-a665-4a22-9d1e-b21ce193e6ad
 # ╟─55548640-75a4-48b8-9e81-d887fda2fdce
