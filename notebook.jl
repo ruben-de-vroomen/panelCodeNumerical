@@ -206,7 +206,7 @@ begin
 end
 
 # ╔═╡ 4db0b387-cb18-4d3b-b111-23342e831156
-function plot_waterline(q, panels; kwargs...)
+function plot_waterline(q, panels; x_target=nothing, kwargs...)
 	waterline_panels = filter(iswaterline,panels)
 	waterline_x = first(centers(waterline_panels)) # x coordinates of waterline
 	waterline_height = map(waterline_panels.x) do cen
@@ -214,9 +214,11 @@ function plot_waterline(q, panels; kwargs...)
 		zeta(x,y,z) = 2* derivative(x->φ(SA[x,y,z],q,panels;kwargs...),x)
 		zeta(x,y,z) - z*derivative(z->zeta(x,y,z),z)
 	end
-	plot(waterline_x, waterline_height,c=:black,label=nothing)
-	scatter!(waterline_x, waterline_height, c=:black,label=nothing)
-end
+	myplot = plot(waterline_x, waterline_height,c=:black,label=nothing, xlabel=x_target)
+	myplot = scatter!(waterline_x, waterline_height, c=:black,label=nothing)
+
+	return myplot
+end;
 
 # ╔═╡ 9ab4f963-dc40-433a-9dfe-a7b56a1116ff
 begin
@@ -279,9 +281,9 @@ The first step in doing this is to define an `x_target`, which lies between $(-0
 """
 
 # ╔═╡ 67717f88-12e3-472d-97ca-9483fae30a04
-begin
+function slicing(x_target, panels)
 	panels_adapted = panels # copy over the panels
-	x_target = 0.48 # this defines the cut-off point!
+	# this defines the cut-off point!
 	
 	# filter out only the desired panels based on x coordinates
 	panel_filter = filter(row -> (abs(row.x[1]) <= x_target), panels_adapted)
@@ -292,9 +294,10 @@ begin
 	aft_face = filter(row -> row.x[1] ≈ min_x, panel_filter)
 
 	# plot to double check it works as expected
-	Plots.scatter(centers(panel_filter)[1], centers(panel_filter)[2],aspect_ratio=:equal)
-	Plots.scatter!(centers(for_face)[1], centers(for_face)[2])
-	Plots.scatter!(centers(aft_face)[1], centers(aft_face)[2])
+	# Plots.scatter(centers(panel_filter)[1], centers(panel_filter)[2],aspect_ratio=:equal)
+	# Plots.scatter!(centers(for_face)[1], centers(for_face)[2])
+	# Plots.scatter!(centers(aft_face)[1], centers(aft_face)[2])
+	return panel_filter, for_face, aft_face
 end
 
 # ╔═╡ adc2fe7d-896c-470f-b512-bb8c9fc92088
@@ -449,6 +452,7 @@ end
 
 # ╔═╡ 18778050-3488-4029-aeca-f503a3db8495
 begin
+	panel_filter, for_face, aft_face = slicing(0.45, panels)
 	for_arc = panelize_arc(for_face)
 	aft_arc = panelize_arc(aft_face)
 	Plots.scatter(centers(panel_filter)[1], centers(panel_filter)[2], aspect_ratio=:equal)
@@ -488,15 +492,15 @@ md"""
 wave_drag(q_arc,arc_panels;G=kelvin,Fn)
 
 # ╔═╡ 2c01e070-4387-4782-ba7a-eb582c2a1a8b
-CwFn = map(0.16:0.015:0.3) do Fn
-	A_fn = ∂ₙϕ.(arc_panels,arc_panels';G=kelvin,Fn,add_waterline=true)
-	q_fn = A_fn \ b_arc
-	Cw = wave_drag(q,arc_panels;G=kelvin,Fn,add_waterline=true)
-	(Fn=Fn,Cw=Cw)
-end |> Table;
+# CwFn = map(0.16:0.015:0.3) do Fn
+# 	A_fn = ∂ₙϕ.(arc_panels,arc_panels';G=kelvin,Fn,add_waterline=true)
+# 	q_fn = A_fn \ b_arc
+# 	Cw = wave_drag(q,arc_panels;G=kelvin,Fn,add_waterline=true)
+# 	(Fn=Fn,Cw=Cw)
+# end |> Table;
 
 # ╔═╡ 6041b3da-85ac-413e-ad1e-70697c1c8b9e
-Plots.scatter(CwFn.Fn,1e4CwFn.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
+# Plots.scatter(CwFn.Fn,1e4CwFn.Cw,xlabel="Fn",ylabel="10⁴ Cw",label=nothing)
 
 # ╔═╡ 9b5e323e-96b3-4487-a9c4-a85040123b67
 md"""
@@ -514,7 +518,33 @@ First the cutoff point will be varied, to see the effect on the wave pattern. As
 
 # ╔═╡ ce422042-b877-4a9e-be06-ed98371f97a7
 begin
-	x_cutoffs = collect(0.38:0.01:0.48)
+	x_cutoffs = collect(0.38:0.02:0.48)
+	display(x_cutoffs)
+
+	wave_plot_array = []
+
+	for idx in 1:size(x_cutoffs)[1]
+		x_target = x_cutoffs[idx]
+
+		panel_filter, for_face, aft_face = slicing(x_target, panels)
+		for_arc = panelize_arc(for_face)
+		aft_arc = panelize_arc(aft_face)
+
+		panels_slice = copy(panel_filter)
+		append!(panels_slice, for_arc, aft_arc)
+
+		b_slice = -Uₙ.(panels_slice;U)
+		A_slice = ∂ₙϕ.(panels_slice,panels_slice';G=kelvin,Fn,add_waterline=wl_check)
+		q_slice = A_slice \ b_slice; @assert A_slice * q_slice ≈ b_slice
+
+		push!(wave_plot_array,plot_waterline(q_slice,panels_slice;G=kelvin,Fn,add_waterline=wl_check,x_target=x_target))
+	end
+
+end
+
+# ╔═╡ 67ee4684-1735-4c78-a606-9bcbeb635181
+begin
+	Plots.plot(wave_plot_array...)
 end
 
 # ╔═╡ eb79419e-df92-4bd3-98e1-5e57bb7b45c5
@@ -1813,6 +1843,7 @@ version = "1.4.1+1"
 # ╟─9b5e323e-96b3-4487-a9c4-a85040123b67
 # ╟─334a2ed8-0106-4530-920c-4f83563f8465
 # ╠═ce422042-b877-4a9e-be06-ed98371f97a7
+# ╠═67ee4684-1735-4c78-a606-9bcbeb635181
 # ╟─eb79419e-df92-4bd3-98e1-5e57bb7b45c5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
