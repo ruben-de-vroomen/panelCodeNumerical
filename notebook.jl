@@ -518,7 +518,7 @@ First the cutoff point will be varied, to see the effect on the wave pattern. As
 
 # ╔═╡ ce422042-b877-4a9e-be06-ed98371f97a7
 begin
-	x_cutoffs = collect(0.38:0.02:0.48)
+	x_cutoffs = collect(0.36:0.04:0.48)
 	display(x_cutoffs)
 
 	wave_plot_array = []
